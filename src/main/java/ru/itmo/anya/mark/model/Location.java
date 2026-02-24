@@ -24,6 +24,9 @@ public class Location {
     }
 
     public void setY(Double y) {
+        if (y== null){
+            throw new IllegalArgumentException("Эт не может быть null");
+        }
         this.y = y;
     }
 
@@ -32,6 +35,9 @@ public class Location {
     }
 
     public void setZ(Integer z) {
+        if (z == null) {
+            throw new IllegalArgumentException("Y не может быть null");
+        }
         this.z = z;
     }
 }

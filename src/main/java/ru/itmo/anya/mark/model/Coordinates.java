@@ -3,7 +3,7 @@ package ru.itmo.anya.mark.model;
 
 public class Coordinates {
     private long x;
-    private double y;//Максимальное значение поля: 663
+    private double y;
 
     public Coordinates(double y, long x) {
         this.y = y;
@@ -23,6 +23,9 @@ public class Coordinates {
     }
 
     public void setY(double y) {
+        if (y >= 663) {
+            throw new IllegalArgumentException("Y не может быть больше 663 символов");
+        }
         this.y = y;
     }
 }
