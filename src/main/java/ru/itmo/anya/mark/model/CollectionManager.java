@@ -5,54 +5,52 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CollectionManager {
-    private Map<Integer, Person> storage = new HashMap<>();
-    private int nextId = 1;
-    public void add(Person person){
-        if (person == null) {
-            throw new IllegalArgumentException("Ошибка: Нельзя добавить пустой объект");
+
+    private Map<Long, DilutionSeries> storage = new HashMap<>();
+
+    public void add(DilutionSeries series) {
+        if (series == null) {
+            throw new IllegalArgumentException("Ошибка: нельзя добавить пустую серию разбавлений");
         }
 
-        int id = generateNextId();
-        person.setId(id);
-        storage.put(id, person);
-        System.out.println("Объект успешно добавлен с ID: " + id);
+        long id = series.getId();
+        storage.put(id, series);
+        System.out.println("Серия разбавлений успешно добавлена с ID: " + id);
     }
-    public Person getById(int id) {
+
+    public DilutionSeries getById(long id) {
         return storage.get(id);
     }
-    public Collection<Person> getAll() {
+
+    public Collection<DilutionSeries> getAll() {
         return storage.values();
     }
-    public void update(int id, Person newData) {
+
+    public void update(long id, DilutionSeries newData) {
         if (!storage.containsKey(id)) {
-            System.out.println("Ошибка: Объект с ID " + id + " не найден");
+            System.out.println("Ошибка: серия с ID " + id + " не найдена");
             return;
         }
-        Person personToUpdate = storage.get(id);
+
+        DilutionSeries seriesToUpdate = storage.get(id);
         try {
+            seriesToUpdate.setName(newData.getName());
+            seriesToUpdate.setSourceType(newData.getSourceType());
+            seriesToUpdate.setSourceId(newData.getSourceId());
+            seriesToUpdate.setOwnerUsername(newData.getOwnerUsername());
 
-            personToUpdate.setName(newData.getName());
-            personToUpdate.setCoordinates(newData.getCoordinates());
-            personToUpdate.setHeight(newData.getHeight());
-
-            System.out.println("Объект с ID " + id + " успешно обновлен");
+            System.out.println("Серия с ID " + id + " успешно обновлена");
         } catch (IllegalArgumentException e) {
             System.out.println("Ошибка валидации при обновлении: " + e.getMessage());
         }
     }
 
-
-    public void remove(int id) {
+    public void remove(long id) {
         if (storage.remove(id) != null) {
-            System.out.println("Объект с ID " + id + " удален");
+            System.out.println("Серия с ID " + id + " удалена");
         } else {
             System.out.println("Ошибка: ID " + id + " не существует");
         }
     }
-
-
-    private int generateNextId() {
-        return nextId++;
-    }
-
 }
+
