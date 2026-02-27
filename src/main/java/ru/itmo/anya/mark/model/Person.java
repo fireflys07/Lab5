@@ -9,36 +9,54 @@ public class Person {
     private Coordinates coordinates;
     private java.util.Date creationDate; //Поле не может быть null, Значение этого поля должно генерироваться автоматически
     private float height; //Значение поля должно быть больше 0
+    private java.time.LocalDateTime birthday;
+    private Color hairColor;
+    private Country nationality;
+    private Location location;
 
-    public Person(int id, String name, Coordinates coordinates, Date creationDate, float height) {
+
+    public Person(String name, Coordinates coordinates, float height) {
         this.id = nextId++;
+        this.creationDate = new java.util.Date();
+
+        setName(name);
+        setCoordinates(coordinates);
+        setHeight(height);
+    }
+
+    public void setId(int id) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("ID должен быть больше 0");
+        }
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        // Добавляем проверку на пустую строку
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Имя не может быть null или пустым");
+        }
         this.name = name;
-        this.coordinates = coordinates;
-        this.creationDate = creationDate;
+    }
+
+    public void setHeight(float height) {
+
+        if (height <= 0) {
+            throw new IllegalArgumentException("Рост должен быть больше 0");
+        }
         this.height = height;
     }
+
 
     public int getId() {
         return id;
     }
 
-    public void setId(int id) {
-        if (id > 0) {
-            throw new IllegalArgumentException("Неправильный формат id");
-        }
-        this.id = id;
-    }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        if (name == null) {
-            throw new IllegalArgumentException("name не может быть null");
-        }
-        this.name = name;
-    }
 
     public Coordinates getCoordinates() {
         return coordinates;
@@ -67,10 +85,36 @@ public class Person {
         return height;
     }
 
-    public void setHeight(float height) {
-        if (height >0) {
-            throw new IllegalArgumentException("Значение должно быть больше 0");
-        }
-        this.height = height;
+
+    public java.time.LocalDateTime getBirthday() {
+        return birthday;
+    }
+
+    public void setBirthday(java.time.LocalDateTime birthday) {
+        this.birthday = birthday; // Может быть null
+    }
+
+    public Color getHairColor() {
+        return hairColor;
+    }
+
+    public void setHairColor(Color hairColor) {
+        this.hairColor = hairColor; // Может быть null
+    }
+
+    public Country getNationality() {
+        return nationality;
+    }
+
+    public void setNationality(Country nationality) {
+        this.nationality = nationality; // Может быть null
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public void setLocation(Location location) {
+        this.location = location; // Может быть null
     }
 }
