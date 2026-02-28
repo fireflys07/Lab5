@@ -3,11 +3,46 @@ package ru.itmo.anya.mark.service;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
+import java.io.*;
 import java.util.*;
 
 public class DilutionStepManager {
 
     private final Map<Long, DilutionStep> storage = new LinkedHashMap<>();
+    private long currentId = 1;
+    private static final String SAVE_FILE = "steps.dat";
+
+    // Сохранить все данные в файл
+    public void saveToFile() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(
+                new FileOutputStream(SAVE_FILE))) {
+            oos.writeObject(storage);
+            oos.writeLong(currentId);
+            System.out.println("Данные сохранены в файл " + SAVE_FILE);
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении: " + e.getMessage());
+        }
+    }
+
+    // Загрузить данные из файла
+    @SuppressWarnings("unchecked")
+    public void loadFromFile() {
+        File file = new File(SAVE_FILE);
+        if (!file.exists()) {
+            System.out.println("Файл сохранения не найден, создаем новую коллекцию");
+            return;
+        }
+
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new FileInputStream(SAVE_FILE))) {
+            storage.clear();
+            storage.putAll((Map<Long, DilutionStep>) ois.readObject());
+            currentId = ois.readLong();
+            System.out.println("Данные загружены из файла. Всего шагов: " + storage.size());
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Ошибка при загрузке: " + e.getMessage());
+        }
+    }
 
     public void add(DilutionStep step) {
         if (step == null) {
@@ -66,6 +101,16 @@ public class DilutionStepManager {
 
     public List<DilutionStep> getSteps() {
         return new ArrayList<>(storage.values());
+    }
+
+    public void addAndSave(DilutionStep step) {
+        // Сначала добавляем в коллекцию
+        add(step);
+
+        // Потом сохраняем все данные в файл
+        saveToFile();
+
+        System.out.println("✅ Шаг добавлен и данные сохранены в файл");
     }
 }
 

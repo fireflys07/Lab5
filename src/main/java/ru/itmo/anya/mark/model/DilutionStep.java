@@ -1,9 +1,10 @@
 package ru.itmo.anya.mark.model;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
-public final class DilutionStep {
+public final class DilutionStep implements Serializable {
     // Уникальный номер шага. Программа назначает сама.
     public final long id;
     // К какой серии относится (id серии).

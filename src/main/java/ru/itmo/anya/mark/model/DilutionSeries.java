@@ -1,9 +1,11 @@
 package ru.itmo.anya.mark.model;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
-public final class DilutionSeries {
+public final class DilutionSeries implements Serializable {
+    private static final long serialVersionUID = 1L;
     // Уникальный номер серии разбавлений. Программа назначает сама.
     private final long id;
     // Название серии (например "Nitrate 1:10 series"). Нельзя пустое. До 128 символов.
