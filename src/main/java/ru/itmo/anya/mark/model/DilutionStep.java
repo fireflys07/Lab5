@@ -20,6 +20,16 @@ public final class DilutionStep {
     // Когда шаг добавлен. Программа ставит автоматически.
     public final Instant createdAt;
 
+    public DilutionStep(long id, Instant createdAt, FinalQuantityUnit finalUnit, double finalQuantity, double factor, int stepNumber, long seriesId) {
+        this.id = id;
+        this.createdAt = createdAt;
+        this.finalUnit = finalUnit;
+        this.finalQuantity = finalQuantity;
+        this.factor = factor;
+        this.stepNumber = stepNumber;
+        this.seriesId = seriesId;
+    }
+
     public DilutionStep(long id, long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit, Instant createdAt) {
         this.id = id;
         this.seriesId = seriesId;
@@ -33,6 +43,11 @@ public final class DilutionStep {
     public DilutionStep(long id, Instant createdAt) {
         this.id = id;
         this.createdAt = createdAt;
+    }
+
+
+    public DilutionStep(long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit) {
+        this(System.currentTimeMillis(), seriesId, stepNumber, factor, finalQuantity, finalUnit, Instant.now());
     }
 
     public long getId() {

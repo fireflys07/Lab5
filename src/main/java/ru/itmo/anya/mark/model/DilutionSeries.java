@@ -34,6 +34,10 @@ public final class DilutionSeries {
         this.createdAt = createdAt;
     }
 
+    public DilutionSeries(String name, DilutionSourceType sourceType, long sourceId, String ownerUsername) {
+        this(System.currentTimeMillis(), name, sourceType, sourceId, ownerUsername, Instant.now(), Instant.now());
+    }
+
     public long getId() {
         return id;
     }

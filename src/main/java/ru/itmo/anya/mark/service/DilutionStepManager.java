@@ -27,12 +27,7 @@ public class DilutionStepManager {
         return storage.values();
     }
 
-    public void update(long id,
-                       long seriesId,
-                       int stepNumber,
-                       double factor,
-                       double finalQuantity,
-                       FinalQuantityUnit finalUnit) {
+    public void update(long id, long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit) {
         if (!storage.containsKey(id)) {
             System.out.println("Ошибка: шаг с ID " + id + " не найден");
             return;
@@ -61,7 +56,7 @@ public class DilutionStepManager {
     }
 
     public long getStepsNextID() {
-        return System.currentTimeMillis()+ storage.size();
+        return System.currentTimeMillis() + storage.size();
     }
 
     public List<DilutionStep> getSteps() {
