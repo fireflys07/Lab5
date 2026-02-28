@@ -1,32 +1,37 @@
 package ru.itmo.anya.mark.model;
 
 import java.time.Instant;
+import java.util.Objects;
 
-public class DilutionSeries {
+public final class DilutionSeries {
+    // Уникальный номер серии разбавлений. Программа назначает сама.
+    private final long id;
+    // Название серии (например "Nitrate 1:10 series"). Нельзя пустое. До 128 символов.
+    private String name;
+    // Тип источника (SAMPLE или SOLUTION).
+    private DilutionSourceType sourceType;
+    // ID источника (sampleId или solutionId, в зависимости от sourceType).
+    private long sourceId;
+    // Кто создал серию (логин). На ранних этапах можно "SYSTEM".
+    private String ownerUsername;
+    // Когда создана. Программа ставит автоматически.
+    private final Instant createdAt;
+    // Когда обновляли. Программа обновляет автоматически.
+    private Instant updatedAt;
 
-    private static long nextId = 1L;
-
-    private long id;                         // назначается программой
-    private String name;                     // не пустое, <= 128 символов
-    private DilutionSourceType sourceType;   // SAMPLE/SOLUTION
-    private long sourceId;                   // > 0
-    private String ownerUsername;            // не пустое, можно "SYSTEM"
-    private Instant createdAt;               // ставится автоматически
-    private Instant updatedAt;               // обновляется при изменениях
-
-    public DilutionSeries(String name, DilutionSourceType sourceType, long sourceId, String ownerUsername) {
-        this.id = generateNextId();
-        this.createdAt = Instant.now();
-        this.updatedAt = this.createdAt;
-
-        setName(name);
-        setSourceType(sourceType);
-        setSourceId(sourceId);
-        setOwnerUsername(ownerUsername);
+    public DilutionSeries(long id, String name, DilutionSourceType sourceType, long sourceId, String ownerUsername, Instant createdAt, Instant updatedAt) {
+        this.id = id;
+        this.setName(name);
+        this.setSourceType(sourceType);
+        this.setSourceId(sourceId);
+        this.setOwnerUsername(ownerUsername);
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
-    private static long generateNextId() {
-        return nextId++;
+    public DilutionSeries(long id, Instant createdAt) {
+        this.id = id;
+        this.createdAt = createdAt;
     }
 
     public long getId() {
@@ -37,52 +42,19 @@ public class DilutionSeries {
         return name;
     }
 
-    public void setName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Название серии не может быть пустым");
-        }
-        if (name.length() > 128) {
-            throw new IllegalArgumentException("Название серии не может быть длиннее 128 символов");
-        }
-        this.name = name;
-        touchUpdatedAt();
-    }
-
     public DilutionSourceType getSourceType() {
         return sourceType;
-    }
-
-    public void setSourceType(DilutionSourceType sourceType) {
-        if (sourceType == null) {
-            throw new IllegalArgumentException("Тип источника не может быть null");
-        }
-        this.sourceType = sourceType;
-        touchUpdatedAt();
     }
 
     public long getSourceId() {
         return sourceId;
     }
 
-    public void setSourceId(long sourceId) {
-        if (sourceId <= 0) {
-            throw new IllegalArgumentException("ID источника должен быть больше 0");
-        }
-        this.sourceId = sourceId;
-        touchUpdatedAt();
-    }
-
     public String getOwnerUsername() {
         return ownerUsername;
     }
 
-    public void setOwnerUsername(String ownerUsername) {
-        if (ownerUsername == null || ownerUsername.trim().isEmpty()) {
-            throw new IllegalArgumentException("Имя владельца серии не может быть пустым");
-        }
-        this.ownerUsername = ownerUsername;
-        touchUpdatedAt();
-    }
+
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -92,8 +64,64 @@ public class DilutionSeries {
         return updatedAt;
     }
 
-    private void touchUpdatedAt() {
-        this.updatedAt = Instant.now();
+    public void setName(String name) {
+        if (name != null && !name.isEmpty() && name.length()<128){
+            this.name = name;
+        } else {
+            throw new IllegalArgumentException("Название серии не может быть пустым или длиннее 128 символов");
+        }
+    }
+
+    public void setSourceType(DilutionSourceType sourceType) {
+        if (sourceType != null) {
+            this.sourceType = sourceType;
+        } else{
+            throw new IllegalArgumentException("Тип источника не может быть null");
+        }
+    }
+
+    public void setSourceId(long sourceId) {
+        if (sourceId > 0) {
+            this.sourceId = sourceId;
+        } else {
+            throw new IllegalArgumentException("ID источника должен быть больше 0");
+        }
+    }
+
+    public void setOwnerUsername(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        if (ownerUsername != null || !ownerUsername.trim().isEmpty()) {
+            this.updatedAt = updatedAt;
+        } else {
+            throw new IllegalArgumentException("Имя владельца серии не может быть пустым");
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DilutionSeries that = (DilutionSeries) o;
+        return id == that.id && sourceId == that.sourceId && Objects.equals(name, that.name) && sourceType == that.sourceType && Objects.equals(ownerUsername, that.ownerUsername) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, sourceType, sourceId, ownerUsername, createdAt, updatedAt);
+    }
+
+    @Override
+    public String toString() {
+        return "DilutionSeries{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", sourceType=" + sourceType +
+                ", sourceId=" + sourceId +
+                ", ownerUsername='" + ownerUsername + '\'' +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
     }
 }
-

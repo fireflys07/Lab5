@@ -1,32 +1,38 @@
 package ru.itmo.anya.mark.model;
 
 import java.time.Instant;
+import java.util.Objects;
 
-public class DilutionStep {
+public final class DilutionStep {
+    // Уникальный номер шага. Программа назначает сама.
+    public final long id;
+    // К какой серии относится (id серии).
+    //Должен ссылаться на реально существующий DilutionSeries.
+    public long seriesId;
+    // Номер шага (1, 2, 3...). Должен быть > 0
+    public int stepNumber;
+    // Коэффициент разбавления (например 10 означает “в 10 раз”). Должен быть > 0
+    public double factor;
+    // Итоговый объём/масса на этом шаге (например 100 mL). Должен быть > 0
+    public double finalQuantity;
+    // Единицы итогового количества (обычно mL).
+    public FinalQuantityUnit finalUnit;
+    // Когда шаг добавлен. Программа ставит автоматически.
+    public final Instant createdAt;
 
-    private static long nextId = 1L;
-
-    private long id;                  // назначается программой
-    private long seriesId;            // > 0 — ссылка на DilutionSeries.id
-    private int stepNumber;           // > 0
-    private double factor;            // > 0
-    private double finalQuantity;     // > 0
-    private FinalQuantityUnit finalUnit; // не null
-    private Instant createdAt;        // автоматически
-
-    public DilutionStep(long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit) {
-        this.id = generateNextId();
-        this.createdAt = Instant.now();
-
-        setSeriesId(seriesId);
-        setStepNumber(stepNumber);
-        setFactor(factor);
-        setFinalQuantity(finalQuantity);
-        setFinalUnit(finalUnit);
+    public DilutionStep(long id, long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit, Instant createdAt) {
+        this.id = id;
+        this.seriesId = seriesId;
+        this.setStepNumber(stepNumber);
+        this.setFactor(factor);
+        this.setFinalQuantity(finalQuantity);
+        this.finalUnit = finalUnit;
+        this.createdAt = createdAt;
     }
 
-    private static long generateNextId() {
-        return nextId++;
+    public DilutionStep(long id, Instant createdAt) {
+        this.id = id;
+        this.createdAt = createdAt;
     }
 
     public long getId() {
@@ -37,59 +43,80 @@ public class DilutionStep {
         return seriesId;
     }
 
-    public void setSeriesId(long seriesId) {
-        if (seriesId <= 0) {
-            throw new IllegalArgumentException("ID серии должен быть больше 0");
-        }
-        this.seriesId = seriesId;
-    }
-
     public int getStepNumber() {
         return stepNumber;
-    }
-
-    public void setStepNumber(int stepNumber) {
-        if (stepNumber <= 0) {
-            throw new IllegalArgumentException("Номер шага должен быть больше 0");
-        }
-        this.stepNumber = stepNumber;
     }
 
     public double getFactor() {
         return factor;
     }
 
-    public void setFactor(double factor) {
-        if (factor <= 0) {
-            throw new IllegalArgumentException("Коэффициент разбавления должен быть больше 0");
-        }
-        this.factor = factor;
-    }
-
     public double getFinalQuantity() {
         return finalQuantity;
-    }
-
-    public void setFinalQuantity(double finalQuantity) {
-        if (finalQuantity <= 0) {
-            throw new IllegalArgumentException("Итоговое количество должно быть больше 0");
-        }
-        this.finalQuantity = finalQuantity;
     }
 
     public FinalQuantityUnit getFinalUnit() {
         return finalUnit;
     }
 
-    public void setFinalUnit(FinalQuantityUnit finalUnit) {
-        if (finalUnit == null) {
-            throw new IllegalArgumentException("Единицы измерения не могут быть null");
-        }
-        this.finalUnit = finalUnit;
-    }
-
     public Instant getCreatedAt() {
         return createdAt;
     }
-}
 
+    public void setSeriesId(long seriesId) {
+        this.seriesId = seriesId;
+    }
+
+    public void setStepNumber(int stepNumber) {
+        if (stepNumber > 0) {
+            this.stepNumber = stepNumber;
+        } else {
+            throw new IllegalArgumentException("ID серии должен быть больше 0");
+        }
+    }
+
+    public void setFactor(double factor) {
+        if (factor > 0) {
+            this.factor = factor;
+        } else {
+            throw new IllegalArgumentException("ID серии должен быть больше 0");
+        }
+    }
+
+    public void setFinalQuantity(double finalQuantity) {
+        if (finalQuantity > 0) {
+            this.finalQuantity = finalQuantity;
+        } else {
+            throw new IllegalArgumentException("ID серии должен быть больше 0");
+        }
+    }
+
+    public void setFinalUnit(FinalQuantityUnit finalUnit) {
+        this.finalUnit = finalUnit;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        DilutionStep that = (DilutionStep) o;
+        return id == that.id && seriesId == that.seriesId && stepNumber == that.stepNumber && Double.compare(factor, that.factor) == 0 && Double.compare(finalQuantity, that.finalQuantity) == 0 && finalUnit == that.finalUnit && Objects.equals(createdAt, that.createdAt);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, seriesId, stepNumber, factor, finalQuantity, finalUnit, createdAt);
+    }
+
+    @Override
+    public String toString() {
+        return "DilutionStep{" +
+                "id=" + id +
+                ", seriesId=" + seriesId +
+                ", stepNumber=" + stepNumber +
+                ", factor=" + factor +
+                ", finalQuantity=" + finalQuantity +
+                ", finalUnit=" + finalUnit +
+                ", createdAt=" + createdAt +
+                '}';
+    }
+}

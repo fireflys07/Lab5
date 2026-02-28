@@ -4,4 +4,3 @@ public enum DilutionSourceType {
     SAMPLE,
     SOLUTION
 }
-
