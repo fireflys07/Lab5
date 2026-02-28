@@ -61,7 +61,7 @@ public class DilutionStepManager {
     }
 
     public long getStepsNextID() {
-        return System.currentTimeMillis()+ storage.size();
+        return System.currentTimeMillis() + storage.size();
     }
 
     public List<DilutionStep> getSteps() {

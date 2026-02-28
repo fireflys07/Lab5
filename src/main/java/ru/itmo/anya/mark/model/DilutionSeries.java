@@ -63,7 +63,7 @@ public final class DilutionSeries {
     }
 
     public void setName(String name) {
-        if (name != null && !name.isEmpty() && name.length()<128){
+        if (name != null && !name.isEmpty() && name.length() < 128) {
             this.name = name;
         } else {
             throw new IllegalArgumentException("Название серии не может быть пустым или длиннее 128 символов");
@@ -73,7 +73,7 @@ public final class DilutionSeries {
     public void setSourceType(DilutionSourceType sourceType) {
         if (sourceType != null) {
             this.sourceType = sourceType;
-        } else{
+        } else {
             throw new IllegalArgumentException("Тип источника не может быть null");
         }
     }

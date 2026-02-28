@@ -1,6 +1,7 @@
 package ru.itmo.anya.mark.service;
 
 import ru.itmo.anya.mark.model.DilutionSeries;
+
 import java.util.*;
 
 public class SeriesCollectionManager {
@@ -23,15 +24,15 @@ public class SeriesCollectionManager {
         System.out.println("Серия разбавлений успешно добавлена с ID: " + series.getId());
     }
 
-    public DilutionSeries getById ( long id){
-            return storage.get(id);
+    public DilutionSeries getById(long id) {
+        return storage.get(id);
     }
 
-    public Collection<DilutionSeries> getAll () {
-            return storage.values();
+    public Collection<DilutionSeries> getAll() {
+        return storage.values();
     }
 
-    public void update ( long id, DilutionSeries newData){
+    public void update(long id, DilutionSeries newData) {
         // Проверяем, существует ли серия
         if (!storage.containsKey(id)) {
             System.out.println("Ошибка: серия с ID " + id + " не найдена");
@@ -60,7 +61,7 @@ public class SeriesCollectionManager {
     }
 
     public long getSeriesNextID() {
-        return System.currentTimeMillis()+ storage.size();
+        return System.currentTimeMillis() + storage.size();
     }
 
     public List<DilutionSeries> getSeries() {
