@@ -9,6 +9,9 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
+
+
+
         SeriesCollectionManager seriesCollection = new SeriesCollectionManager();
         long seriesNextID = seriesCollection.getSeriesNextID();
         DilutionSeries serie = new DilutionSeries(seriesNextID, Instant.now());
@@ -24,5 +27,6 @@ public class Main {
         stepsCollection.add(step);
         List<DilutionStep> steps = stepsCollection.getSteps();
         steps.forEach(System.out::println);
-    }
+        }
+
 }

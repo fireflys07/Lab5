@@ -32,7 +32,7 @@ public class SeriesCollectionManager {
     }
 
     public void update ( long id, DilutionSeries newData){
-        // Проверяем, существует ли серия
+
         if (!storage.containsKey(id)) {
             System.out.println("Ошибка: серия с ID " + id + " не найдена");
             return;
