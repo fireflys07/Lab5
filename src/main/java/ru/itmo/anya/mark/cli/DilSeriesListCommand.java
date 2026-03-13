@@ -3,12 +3,11 @@ package ru.itmo.anya.mark.cli;
 import ru.itmo.anya.mark.model.DilutionSeries;
 
 import java.util.List;
-import java.util.Scanner;
 
 public final class DilSeriesListCommand extends BaseCommand {
 
-    public DilSeriesListCommand(Scanner scanner, DilutionService service) {
-        super(scanner, service);
+    public DilSeriesListCommand(Environment env) {
+        super(env);
     }
 
     @Override
@@ -18,7 +17,7 @@ public final class DilSeriesListCommand extends BaseCommand {
             return;
         }
 
-        List<DilutionSeries> list = service.listSeries();
+        List<DilutionSeries> list = env.getService().listSeries();
         System.out.println("ID Name");
         for (DilutionSeries s : list) {
             System.out.println(s.getId() + " " + s.getName());

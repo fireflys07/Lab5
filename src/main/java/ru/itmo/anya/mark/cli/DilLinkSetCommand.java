@@ -3,7 +3,6 @@ package ru.itmo.anya.mark.cli;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 
 import java.util.Locale;
-import java.util.Scanner;
 import java.util.Set;
 
 public final class DilLinkSetCommand extends BaseCommand {
@@ -11,11 +10,10 @@ public final class DilLinkSetCommand extends BaseCommand {
     private final Set<Long> knownSampleIds;
     private final Set<Long> knownSolutionIds;
 
-    public DilLinkSetCommand(Scanner scanner,
-                             DilutionService service,
+    public DilLinkSetCommand(Environment env,
                              Set<Long> knownSampleIds,
                              Set<Long> knownSolutionIds) {
-        super(scanner, service);
+        super(env);
         this.knownSampleIds = knownSampleIds;
         this.knownSolutionIds = knownSolutionIds;
     }
@@ -36,11 +34,11 @@ public final class DilLinkSetCommand extends BaseCommand {
         }
 
         System.out.print("Источник (SAMPLE|SOLUTION): ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать тип");
             return;
         }
-        String rawType = scanner.nextLine().trim();
+        String rawType = env.getScanner().nextLine().trim();
         DilutionSourceType type = parseSourceTypeOrNull(rawType);
         if (type == null) {
             System.out.println("Ошибки: неизвестный тип");
@@ -48,11 +46,11 @@ public final class DilLinkSetCommand extends BaseCommand {
         }
 
         System.out.print("ID источника: ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать id");
             return;
         }
-        String rawSourceId = scanner.nextLine().trim();
+        String rawSourceId = env.getScanner().nextLine().trim();
 
         long sourceId;
         try {
@@ -68,7 +66,7 @@ public final class DilLinkSetCommand extends BaseCommand {
         }
 
         try {
-            service.linkSource(seriesId, type, sourceId);
+            env.getService().linkSource(seriesId, type, sourceId);
             System.out.println("OK");
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);

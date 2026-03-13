@@ -11,6 +11,7 @@ import java.util.*;
 public final class CommandLineInterface {
     private final Scanner scanner;
     private final DilutionService service;
+    private final Environment env;
     private final Map<String, Command> commands = new LinkedHashMap<>();
     private boolean running = true;
 
@@ -23,6 +24,7 @@ public final class CommandLineInterface {
         }
         this.scanner = scanner;
         this.service = service;
+        this.env = new Environment(scanner, service);
         registerCommands();
     }
 
@@ -30,12 +32,12 @@ public final class CommandLineInterface {
         Set<Long> knownSampleIds = new HashSet<>(Set.of(12L));
         Set<Long> knownSolutionIds = new HashSet<>(Set.of(1L));
 
-        commands.put("dil_series_create", new DilSeriesCreateCommand(scanner, service));
-        commands.put("dil_series_list", new DilSeriesListCommand(scanner, service));
-        commands.put("dil_series_show", new DilSeriesShowCommand(scanner, service));
-        commands.put("dil_step_add", new DilStepAddCommand(scanner, service));
-        commands.put("dil_step_list", new DilStepListCommand(scanner, service));
-        commands.put("dil_link_set", new DilLinkSetCommand(scanner, service, knownSampleIds, knownSolutionIds));
+        commands.put("dil_series_create", new DilSeriesCreateCommand(env));
+        commands.put("dil_series_list", new DilSeriesListCommand(env));
+        commands.put("dil_series_show", new DilSeriesShowCommand(env));
+        commands.put("dil_step_add", new DilStepAddCommand(env));
+        commands.put("dil_step_list", new DilStepListCommand(env));
+        commands.put("dil_link_set", new DilLinkSetCommand(env, knownSampleIds, knownSolutionIds));
         commands.put("help", new HelpCommand(commands));
         commands.put("exit", new ExitCommand(() -> running = false));
     }

@@ -4,12 +4,11 @@ import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
 import java.util.Locale;
-import java.util.Scanner;
 
 public final class DilStepAddCommand extends BaseCommand {
 
-    public DilStepAddCommand(Scanner scanner, DilutionService service) {
-        super(scanner, service);
+    public DilStepAddCommand(Environment env) {
+        super(env);
     }
 
     @Override
@@ -28,32 +27,32 @@ public final class DilStepAddCommand extends BaseCommand {
         }
 
         System.out.print("Шаг номер: ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать stepNumber");
             return;
         }
-        String rawStepNumber = scanner.nextLine().trim();
+        String rawStepNumber = env.getScanner().nextLine().trim();
 
         System.out.print("Коэффициент (например 10): ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать factor");
             return;
         }
-        String rawFactor = scanner.nextLine().trim();
+        String rawFactor = env.getScanner().nextLine().trim();
 
         System.out.print("Итоговый объём: ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать finalQuantity");
             return;
         }
-        String rawFinalQty = scanner.nextLine().trim();
+        String rawFinalQty = env.getScanner().nextLine().trim();
 
         System.out.print("Единицы (mL): ");
-        if (!scanner.hasNextLine()) {
+        if (!env.getScanner().hasNextLine()) {
             System.out.println("Ошибки: не удалось прочитать unit");
             return;
         }
-        String rawUnit = scanner.nextLine().trim();
+        String rawUnit = env.getScanner().nextLine().trim();
 
         int stepNumber;
         double factor;
@@ -79,7 +78,7 @@ public final class DilStepAddCommand extends BaseCommand {
         }
 
         try {
-            DilutionStep step = service.addStep(seriesId, stepNumber, factor, finalQty, unit);
+            DilutionStep step = env.getService().addStep(seriesId, stepNumber, factor, finalQty, unit);
             System.out.println("OK step_id=" + step.getId());
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);

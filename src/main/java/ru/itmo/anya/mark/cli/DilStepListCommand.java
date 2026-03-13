@@ -5,12 +5,11 @@ import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Scanner;
 
 public final class DilStepListCommand extends BaseCommand {
 
-    public DilStepListCommand(Scanner scanner, DilutionService service) {
-        super(scanner, service);
+    public DilStepListCommand(Environment env) {
+        super(env);
     }
 
     @Override
@@ -29,7 +28,7 @@ public final class DilStepListCommand extends BaseCommand {
         }
 
         try {
-            List<DilutionStep> steps = service.listSteps(seriesId);
+            List<DilutionStep> steps = env.getService().listSteps(seriesId);
             System.out.println("ID Step Factor FinalQty Unit");
             for (DilutionStep st : steps) {
                 System.out.println(

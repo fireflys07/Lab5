@@ -1,24 +1,20 @@
 package ru.itmo.anya.mark.cli;
 
-import java.util.Scanner;
-
 /**
- * Базовая команда с доступом к Scanner и DilutionService.
+ * Базовая команда с доступом к общему Environment.
  */
 public abstract class BaseCommand extends Command {
 
-    protected final Scanner scanner;
-    protected final DilutionService service;
+    protected final Environment env;
 
-    protected BaseCommand(Scanner scanner, DilutionService service) {
-        if (scanner == null) {
-            throw new IllegalArgumentException("scanner: null");
+    protected BaseCommand(Environment env) {
+        if (env == null) {
+            throw new IllegalArgumentException("env: null");
         }
-        if (service == null) {
-            throw new IllegalArgumentException("service: null");
-        }
-        this.scanner = scanner;
-        this.service = service;
+        this.env = env;
+    }
+
+    protected Environment getEnv() {
+        return env;
     }
 }
-

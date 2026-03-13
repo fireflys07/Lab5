@@ -2,13 +2,10 @@ package ru.itmo.anya.mark.cli;
 
 import ru.itmo.anya.mark.model.DilutionSeries;
 
-import java.util.Locale;
-import java.util.Scanner;
-
 public final class DilSeriesShowCommand extends BaseCommand {
 
-    public DilSeriesShowCommand(Scanner scanner, DilutionService service) {
-        super(scanner, service);
+    public DilSeriesShowCommand(Environment env) {
+        super(env);
     }
 
     @Override
@@ -27,8 +24,8 @@ public final class DilSeriesShowCommand extends BaseCommand {
         }
 
         try {
-            DilutionSeries s = service.getSeries(id);
-            int stepsCount = service.listSteps(id).size();
+            DilutionSeries s = env.getService().getSeries(id);
+            int stepsCount = env.getService().listSteps(id).size();
             System.out.println("DilutionSeries #" + s.getId());
             System.out.println("steps: " + stepsCount);
         } catch (IllegalArgumentException e) {
