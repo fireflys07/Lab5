@@ -6,27 +6,32 @@ import ru.itmo.anya.mark.model.DilutionSourceType;
 public final class DilSeriesCreateCommand extends BaseCommand {
 
     public DilSeriesCreateCommand(Environment env) {
-        super(env);
+        super(env, true);
     }
 
     @Override
-    public void execute(String[] args) {
+    public void checkArgs(String[] args) throws CommandException {
         if (args.length != 0) {
-            System.out.println("Ошибка: команда dil_series_create не принимает аргументы");
-            return;
+            throw new CommandException("команда dil_series_create не принимает аргументы");
         }
+    }
 
+    @Override
+    public void readAdditionalInput(Environment env) throws CommandException {
         System.out.print("Название: ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибка: не удалось прочитать название");
-            return;
+            throw new CommandException("не удалось прочитать название");
         }
+    }
+
+    @Override
+    public void execute(String[] args) throws CommandException {
         String name = env.getScanner().nextLine();
         try {
             DilutionSeries series = env.getService().createSeries(name, DilutionSourceType.SAMPLE, 1L, "SYSTEM");
             System.out.println("OK series_id=" + series.getId());
         } catch (IllegalArgumentException e) {
-            System.out.println("Ошибки: " + e.getMessage());
+            throw new CommandException(e.getMessage());
         }
     }
 

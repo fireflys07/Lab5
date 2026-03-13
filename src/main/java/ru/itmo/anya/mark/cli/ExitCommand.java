@@ -5,6 +5,7 @@ public final class ExitCommand extends Command {
     private final Runnable onExit;
 
     public ExitCommand(Runnable onExit) {
+        super(false);
         if (onExit == null) {
             throw new IllegalArgumentException("onExit: null");
         }
@@ -12,10 +13,9 @@ public final class ExitCommand extends Command {
     }
 
     @Override
-    public void execute(String[] args) {
+    public void execute(String[] args) throws CommandException {
         if (args.length != 0) {
-            System.out.println("Ошибка: команда exit не принимает аргументы");
-            return;
+            throw new CommandException("команда exit не принимает аргументы");
         }
         onExit.run();
     }

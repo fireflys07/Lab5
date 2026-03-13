@@ -34,7 +34,7 @@ public class DilutionStepManager {
                        double finalQuantity,
                        FinalQuantityUnit finalUnit) {
         if (!storage.containsKey(id)) {
-            System.out.println("Ошибка: шаг с ID " + id + " не найден");
+            System.err.println("Ошибка: шаг с ID " + id + " не найден");
             return;
         }
 
@@ -56,7 +56,7 @@ public class DilutionStepManager {
         if (storage.remove(id) != null) {
             System.out.println("Шаг с ID " + id + " удалён");
         } else {
-            System.out.println("Ошибка: ID " + id + " не существует");
+            System.err.println("Ошибка: ID " + id + " не существует");
         }
     }
 

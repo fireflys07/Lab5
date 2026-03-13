@@ -9,23 +9,26 @@ import java.util.Locale;
 public final class DilStepListCommand extends BaseCommand {
 
     public DilStepListCommand(Environment env) {
-        super(env);
+        super(env, false);
     }
 
     @Override
-    public void execute(String[] args) {
+    public void checkArgs(String[] args) throws CommandException {
         if (args.length != 1) {
-            System.out.println("Ошибка: формат: dil_step_list <series_id>");
-            return;
+            throw new CommandException("формат: dil_step_list <series_id>");
         }
 
         long seriesId;
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            System.out.println("Ошибки: series_id не число");
-            return;
+            throw new CommandException("series_id не число");
         }
+    }
+
+    @Override
+    public void execute(String[] args) throws CommandException {
+        long seriesId = Long.parseLong(args[0]);
 
         try {
             List<DilutionStep> steps = env.getService().listSteps(seriesId);
@@ -42,9 +45,9 @@ public final class DilStepListCommand extends BaseCommand {
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
             if (msg.contains("series")) {
-                System.out.println("Ошибки: series не найден");
+                throw new CommandException("series не найден");
             } else {
-                System.out.println("Ошибки: " + e.getMessage());
+                throw new CommandException(e.getMessage());
             }
         }
     }

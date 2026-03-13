@@ -13,56 +13,64 @@ public final class DilLinkSetCommand extends BaseCommand {
     public DilLinkSetCommand(Environment env,
                              Set<Long> knownSampleIds,
                              Set<Long> knownSolutionIds) {
-        super(env);
+        super(env, true);
         this.knownSampleIds = knownSampleIds;
         this.knownSolutionIds = knownSolutionIds;
     }
 
     @Override
-    public void execute(String[] args) {
+    public void checkArgs(String[] args) throws CommandException {
         if (args.length != 1) {
-            System.out.println("Ошибка: формат: dil_link_set <series_id>");
-            return;
+            throw new CommandException("формат: dil_link_set <series_id>");
         }
 
         long seriesId;
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            System.out.println("Ошибки: series_id не число");
-            return;
+            throw new CommandException("series_id не число");
         }
+        this.cachedSeriesId = seriesId;
+    }
 
+    private long cachedSeriesId;
+    private String cachedType;
+    private String cachedSourceId;
+
+    @Override
+    public void readAdditionalInput(Environment env) throws CommandException {
         System.out.print("Источник (SAMPLE|SOLUTION): ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать тип");
-            return;
+            throw new CommandException("не удалось прочитать тип");
         }
         String rawType = env.getScanner().nextLine().trim();
-        DilutionSourceType type = parseSourceTypeOrNull(rawType);
-        if (type == null) {
-            System.out.println("Ошибки: неизвестный тип");
-            return;
-        }
-
         System.out.print("ID источника: ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать id");
-            return;
+            throw new CommandException("не удалось прочитать id");
         }
         String rawSourceId = env.getScanner().nextLine().trim();
+        this.cachedType = rawType;
+        this.cachedSourceId = rawSourceId;
+    }
+
+    @Override
+    public void execute(String[] args) throws CommandException {
+        long seriesId = cachedSeriesId;
+
+        DilutionSourceType type = parseSourceTypeOrNull(cachedType);
+        if (type == null) {
+            throw new CommandException("неизвестный тип");
+        }
 
         long sourceId;
         try {
-            sourceId = Long.parseLong(rawSourceId);
+            sourceId = Long.parseLong(cachedSourceId);
         } catch (NumberFormatException e) {
-            System.out.println("Ошибки: id не найден");
-            return;
+            throw new CommandException("id не найден");
         }
 
         if (!isKnownSourceId(type, sourceId)) {
-            System.out.println("Ошибки: id не найден");
-            return;
+            throw new CommandException("id не найден");
         }
 
         try {
@@ -71,9 +79,9 @@ public final class DilLinkSetCommand extends BaseCommand {
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
             if (msg.contains("series")) {
-                System.out.println("Ошибки: series не найден");
+                throw new CommandException("series не найден");
             } else {
-                System.out.println("Ошибки: " + e.getMessage());
+                throw new CommandException(e.getMessage());
             }
         }
     }

@@ -35,7 +35,7 @@ public class SeriesCollectionManager {
     public void update(long id, DilutionSeries newData) {
         // Проверяем, существует ли серия
         if (!storage.containsKey(id)) {
-            System.out.println("Ошибка: серия с ID " + id + " не найдена");
+            System.err.println("Ошибка: серия с ID " + id + " не найдена");
             return;
         }
 
@@ -48,7 +48,7 @@ public class SeriesCollectionManager {
 
             System.out.println("Серия с ID " + id + " успешно обновлена");
         } catch (IllegalArgumentException e) {
-            System.out.println("Ошибка валидации при обновлении: " + e.getMessage());
+            System.err.println("Ошибка валидации при обновлении: " + e.getMessage());
         }
     }
 
@@ -56,7 +56,7 @@ public class SeriesCollectionManager {
         if (storage.remove(id) != null) {
             System.out.println("Серия с ID " + id + " удалена");
         } else {
-            System.out.println("Ошибка: ID " + id + " не существует");
+            System.err.println("Ошибка: ID " + id + " не существует");
         }
     }
 
