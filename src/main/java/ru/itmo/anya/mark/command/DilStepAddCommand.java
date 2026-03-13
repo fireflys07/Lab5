@@ -10,73 +10,91 @@ import java.util.Locale;
 public final class DilStepAddCommand extends BaseCommand {
 
     public DilStepAddCommand(Environment env) {
-        super(env);
+        super(env, true);
     }
 
     @Override
-    public void execute(String[] args) {
+    public void checkArgs(String[] args) throws CommandException {
         if (args.length != 1) {
-            System.out.println("Ошибка: формат: dil_step_add <series_id>");
-            return;
+            throw new CommandException("формат: dil_step_add <series_id>");
         }
 
         long seriesId;
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            System.out.println("Ошибки: series_id не число");
-            return;
+            throw new CommandException("series_id не число");
         }
+    }
 
+    @Override
+    public void readAdditionalInput(Environment env) throws CommandException {
         System.out.print("Шаг номер: ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать stepNumber");
-            return;
+            throw new CommandException("не удалось прочитать stepNumber");
         }
         String rawStepNumber = env.getScanner().nextLine().trim();
 
         System.out.print("Коэффициент (например 10): ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать factor");
-            return;
+            throw new CommandException("не удалось прочитать factor");
         }
         String rawFactor = env.getScanner().nextLine().trim();
 
         System.out.print("Итоговый объём: ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать finalQuantity");
-            return;
+            throw new CommandException("не удалось прочитать finalQuantity");
         }
         String rawFinalQty = env.getScanner().nextLine().trim();
 
         System.out.print("Единицы (mL): ");
         if (!env.getScanner().hasNextLine()) {
-            System.out.println("Ошибки: не удалось прочитать unit");
-            return;
+            throw new CommandException("не удалось прочитать unit");
         }
         String rawUnit = env.getScanner().nextLine().trim();
+
+        // сохраняем во временные поля для execute
+        this.cachedSeriesId = null; // будет установлен в execute на основе args
+        this.cachedStepNumber = rawStepNumber;
+        this.cachedFactor = rawFactor;
+        this.cachedFinalQty = rawFinalQty;
+        this.cachedUnit = rawUnit;
+    }
+
+    private Long cachedSeriesId;
+    private String cachedStepNumber;
+    private String cachedFactor;
+    private String cachedFinalQty;
+    private String cachedUnit;
+
+    @Override
+    public void execute(String[] args) throws CommandException {
+        long seriesId;
+        try {
+            seriesId = Long.parseLong(args[0]);
+        } catch (NumberFormatException e) {
+            throw new CommandException("series_id не число");
+        }
+        this.cachedSeriesId = seriesId;
 
         int stepNumber;
         double factor;
         double finalQty;
         try {
-            stepNumber = Integer.parseInt(rawStepNumber);
-            factor = Double.parseDouble(rawFactor);
-            finalQty = Double.parseDouble(rawFinalQty);
+            stepNumber = Integer.parseInt(cachedStepNumber);
+            factor = Double.parseDouble(cachedFactor);
+            finalQty = Double.parseDouble(cachedFinalQty);
         } catch (NumberFormatException e) {
-            System.out.println("Ошибки: коэффициент/объём не числа");
-            return;
+            throw new CommandException("коэффициент/объём не числа");
         }
 
         if (factor <= 0) {
-            System.out.println("Ошибки: коэффициент <=0");
-            return;
+            throw new CommandException("коэффициент <=0");
         }
 
-        FinalQuantityUnit unit = parseUnitOrNull(rawUnit);
+        FinalQuantityUnit unit = parseUnitOrNull(cachedUnit);
         if (unit == null) {
-            System.out.println("Ошибки: неизвестные единицы");
-            return;
+            throw new CommandException("неизвестные единицы");
         }
 
         try {
@@ -85,11 +103,11 @@ public final class DilStepAddCommand extends BaseCommand {
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
             if (msg.contains("series")) {
-                System.out.println("Ошибки: series не найден");
+                throw new CommandException("series не найден");
             } else if (msg.contains("factor") || msg.contains("finalquantity")) {
-                System.out.println("Ошибки: коэффициент <=0");
+                throw new CommandException("коэффициент <=0");
             } else {
-                System.out.println("Ошибки: " + e.getMessage());
+                throw new CommandException(e.getMessage());
             }
         }
     }

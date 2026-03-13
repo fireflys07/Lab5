@@ -9,16 +9,18 @@ import java.util.List;
 public final class DilSeriesListCommand extends BaseCommand {
 
     public DilSeriesListCommand(Environment env) {
-        super(env);
+        super(env, false);
+    }
+
+    @Override
+    public void checkArgs(String[] args) throws CommandException {
+        if (args.length != 0) {
+            throw new CommandException("команда dil_series_list не принимает аргументы");
+        }
     }
 
     @Override
     public void execute(String[] args) {
-        if (args.length != 0) {
-            System.out.println("Ошибка: команда dil_series_list не принимает аргументы");
-            return;
-        }
-
         List<DilutionSeries> list = env.getService().listSeries();
         System.out.println("ID Name");
         for (DilutionSeries s : list) {

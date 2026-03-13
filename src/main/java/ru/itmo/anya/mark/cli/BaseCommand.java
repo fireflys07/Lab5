@@ -7,7 +7,8 @@ public abstract class BaseCommand extends Command {
 
     protected final Environment env;
 
-    protected BaseCommand(Environment env) {
+    protected BaseCommand(Environment env, boolean reqAdditionalInput) {
+        super(reqAdditionalInput);
         if (env == null) {
             throw new IllegalArgumentException("env: null");
         }

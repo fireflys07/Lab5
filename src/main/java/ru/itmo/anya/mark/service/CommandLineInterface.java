@@ -60,12 +60,22 @@ public final class CommandLineInterface {
             String cmdName = parts[0].toLowerCase(Locale.ROOT);
             Command command = commands.get(cmdName);
             if (command == null) {
-                System.out.println("Ошибка: неизвестная команда. Введите help");
+                System.err.println("Ошибка: неизвестная команда. Введите help");
                 continue;
             }
 
             String[] args = Arrays.copyOfRange(parts, 1, parts.length);
-            command.execute(args);
+            try {
+                command.checkArgs(args);
+                if (command.isReqAdditionalInput()) {
+                    command.readAdditionalInput(env);
+                }
+                command.execute(args);
+            } catch (CommandException e) {
+                if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+                    System.err.println("Ошибки: " + e.getMessage());
+                }
+            }
         }
     }
 }
