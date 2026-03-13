@@ -51,7 +51,7 @@ public class DilutionStepManager {
             System.out.println("Ошибка валидации при обновлении шага: " + e.getMessage());
         }
     }
-
+2
     public void remove(long id) {
         if (storage.remove(id) != null) {
             System.out.println("Шаг с ID " + id + " удалён");
