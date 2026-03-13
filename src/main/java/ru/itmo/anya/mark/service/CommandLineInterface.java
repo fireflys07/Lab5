@@ -6,13 +6,17 @@ import ru.itmo.anya.mark.model.DilutionSourceType;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Scanner;
+import java.util.Set;
 
 public final class CommandLineInterface {
     private final Scanner scanner;
     private final DilutionService service;
+    private final Set<Long> knownSampleIds = new HashSet<>(Set.of(12L));
+    private final Set<Long> knownSolutionIds = new HashSet<>(Set.of(1L));
 
     public CommandLineInterface(Scanner scanner, DilutionService service) {
         if (scanner == null) {
@@ -27,6 +31,7 @@ public final class CommandLineInterface {
 
     public void run() {
         while (true) {
+            System.out.print("> ");
             if (!scanner.hasNextLine()) {
                 return;
             }
@@ -80,6 +85,13 @@ public final class CommandLineInterface {
                     }
                     handleStepList(parts[1]);
                 }
+                case "dil_link_set" -> {
+                    if (parts.length != 2) {
+                        System.out.println("Ошибка: формат: dil_link_set <series_id>");
+                        continue;
+                    }
+                    handleLinkSet(parts[1]);
+                }
                 case "help" -> {
                     if (parts.length != 1) {
                         System.out.println("Ошибка: команда help не принимает аргументы");
@@ -92,6 +104,7 @@ public final class CommandLineInterface {
                         System.out.println("Ошибка: команда exit не принимает аргументы");
                         continue;
                     }
+                    System.out.println("Спасибо, папаша!");
                     return;
                 }
                 default -> System.out.println("Ошибка: неизвестная команда. Введите help");
@@ -290,12 +303,92 @@ public final class CommandLineInterface {
         return Double.toString(value);
     }
 
+    private void handleLinkSet(String rawSeriesId) {
+        long seriesId;
+        try {
+            seriesId = Long.parseLong(rawSeriesId);
+        } catch (NumberFormatException e) {
+            System.out.println("Ошибки: series_id не число");
+            return;
+        }
+
+        System.out.print("Источник (SAMPLE|SOLUTION): ");
+        if (!scanner.hasNextLine()) {
+            System.out.println("Ошибки: не удалось прочитать тип");
+            return;
+        }
+        String rawType = scanner.nextLine().trim();
+        DilutionSourceType type = parseSourceTypeOrNull(rawType);
+        if (type == null) {
+            System.out.println("Ошибки: неизвестный тип");
+            return;
+        }
+
+        System.out.print("ID источника: ");
+        if (!scanner.hasNextLine()) {
+            System.out.println("Ошибки: не удалось прочитать id");
+            return;
+        }
+        String rawSourceId = scanner.nextLine().trim();
+
+        long sourceId;
+        try {
+            sourceId = Long.parseLong(rawSourceId);
+        } catch (NumberFormatException e) {
+            System.out.println("Ошибки: id не найден");
+            return;
+        }
+
+        if (!isKnownSourceId(type, sourceId)) {
+            System.out.println("Ошибки: id не найден");
+            return;
+        }
+
+        try {
+            service.linkSource(seriesId, type, sourceId);
+            System.out.println("OK");
+        } catch (IllegalArgumentException e) {
+            String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
+            if (msg.contains("series")) {
+                System.out.println("Ошибки: series не найден");
+            } else {
+                System.out.println("Ошибки: " + e.getMessage());
+            }
+        }
+    }
+
+    private static DilutionSourceType parseSourceTypeOrNull(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String s = raw.trim().toUpperCase(Locale.ROOT);
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return DilutionSourceType.valueOf(s);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private boolean isKnownSourceId(DilutionSourceType type, long sourceId) {
+        if (sourceId <= 0) {
+            return false;
+        }
+        return switch (type) {
+            case SAMPLE -> knownSampleIds.contains(sourceId);
+            case SOLUTION -> knownSolutionIds.contains(sourceId);
+        };
+    }
+
     private static void printHelp() {
         System.out.println("Доступные команды:");
         System.out.println("  help                - список команд");
         System.out.println("  exit                - выход");
         System.out.println();
         System.out.println("Команды предметной области (пока могут быть не реализованы в CLI):");
+        System.out.println("Помощи не будет.");
         System.out.println("  dil_series_create");
         System.out.println("  dil_series_list");
         System.out.println("  dil_series_show <series_id>");
