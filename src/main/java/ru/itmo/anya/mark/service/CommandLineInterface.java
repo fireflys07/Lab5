@@ -1,27 +1,40 @@
 package ru.itmo.anya.mark.service;
-
-import ru.itmo.anya.mark.cli.*;
 import ru.itmo.anya.mark.command.*;
+import ru.itmo.anya.mark.interpreter.Command;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 
 import java.util.*;
 
 public final class CommandLineInterface {
     private final Scanner scanner;
-    private final DilutionService service;
     private final Environment env;
     private final Map<String, Command> commands = new LinkedHashMap<>();
     private boolean running = true;
 
-    public CommandLineInterface(Scanner scanner, DilutionService service) {
+    public CommandLineInterface(Scanner scanner,
+                                DilutionService dilutionService,
+                                SeriesCollectionManager seriesCollectionManager,
+                                DilutionStepManager dilutionStepManager) {
         if (scanner == null) {
             throw new IllegalArgumentException("scanner: null");
         }
-        if (service == null) {
+        if (dilutionService == null) {
             throw new IllegalArgumentException("service: null");
         }
+
+        if (seriesCollectionManager == null) {
+            throw new IllegalArgumentException("service: null");
+        }
+        if (dilutionStepManager == null) {
+            throw new IllegalArgumentException("service: null");
+        }
+
         this.scanner = scanner;
-        this.service = service;
-        this.env = new Environment(scanner, service);
+        this.env = new Environment(seriesCollectionManager,
+                dilutionStepManager,
+                dilutionService,
+                this);
         registerCommands();
     }
 
@@ -70,7 +83,7 @@ public final class CommandLineInterface {
                 if (command.isReqAdditionalInput()) {
                     command.readAdditionalInput(env);
                 }
-                command.execute(args);
+                command.execute(env, args);
             } catch (CommandException e) {
                 if (e.getMessage() != null && !e.getMessage().isEmpty()) {
                     System.err.println("Ошибки: " + e.getMessage());

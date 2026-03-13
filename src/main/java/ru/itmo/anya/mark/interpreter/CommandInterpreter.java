@@ -44,16 +44,23 @@ public class CommandInterpreter {
             }
             try {command.checkArgs(args);
 
-                if (command.isRequiresAdditionalInput()) {
-                    command.additionalInput(environment, scanner);
+                if (command.isReqAdditionalInput()) {
+                    command.readAdditionalInput(environment);
                 }
                 command.execute(environment, args);
 
             } catch (CommandArgsException exception) {
                 System.out.println("Ошибка аргументов: " + exception.getMessage());
                 System.out.println("Подсказка: " + command.getHelp());
-            } catch (ValidationException exception) {
-                System.out.println("Ошибка валидации: " + exception.getMessage());
+
+            } catch (CommandException exception) {
+                // Проверяем, не обёрнутое ли это ValidationException
+                if (exception.getCause() instanceof ValidationException) {
+                    System.out.println("Ошибка валидации: " + exception.getMessage());
+                } else {
+                    System.out.println("Ошибка команды: " + exception.getMessage());
+                }
+
             } catch (Exception exception) {
                 System.out.println("Непредвиденная ошибка: " + exception.getMessage());
             }

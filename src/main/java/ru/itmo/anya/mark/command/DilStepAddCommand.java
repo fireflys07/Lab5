@@ -1,6 +1,8 @@
 package ru.itmo.anya.mark.command;
 
 import ru.itmo.anya.mark.cli.BaseCommand;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
@@ -13,6 +15,11 @@ public final class DilStepAddCommand extends BaseCommand {
     }
 
     @Override
+    public String getName() {
+        return "dil_step_add";
+    }
+
+    @Override
     public void checkArgs(String[] args) throws CommandException {
         if (args.length != 1) {
             throw new CommandException("формат: dil_step_add <series_id>");
@@ -22,7 +29,7 @@ public final class DilStepAddCommand extends BaseCommand {
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число");
+            throw new CommandException("series_id не число", e);
         }
     }
 
@@ -67,12 +74,12 @@ public final class DilStepAddCommand extends BaseCommand {
     private String cachedUnit;
 
     @Override
-    public void execute(String[] args) throws CommandException {
+    public void execute(Environment environment, String[] args) throws CommandException {
         long seriesId;
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число");
+            throw new CommandException("series_id не число", e);
         }
         this.cachedSeriesId = seriesId;
 
@@ -84,7 +91,7 @@ public final class DilStepAddCommand extends BaseCommand {
             factor = Double.parseDouble(cachedFactor);
             finalQty = Double.parseDouble(cachedFinalQty);
         } catch (NumberFormatException e) {
-            throw new CommandException("коэффициент/объём не числа");
+            throw new CommandException("коэффициент/объём не числа", e);
         }
 
         if (factor <= 0) {

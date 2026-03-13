@@ -1,6 +1,8 @@
 package ru.itmo.anya.mark.command;
 
-import ru.itmo.anya.mark.cli.Command;
+import ru.itmo.anya.mark.interpreter.Command;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 
 import java.util.Map;
 
@@ -17,7 +19,12 @@ public final class HelpCommand extends Command {
     }
 
     @Override
-    public void execute(String[] args) throws CommandException {
+    public String getName() {
+        return "help";
+    }
+
+    @Override
+    public void execute(Environment environment, String[] args) throws CommandException {
         if (args.length != 0) {
             throw new CommandException("команда help не принимает аргументы");
         }

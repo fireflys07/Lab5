@@ -1,6 +1,8 @@
 package ru.itmo.anya.mark.command;
 
 import ru.itmo.anya.mark.cli.BaseCommand;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 
 import java.util.Locale;
@@ -20,6 +22,11 @@ public final class DilLinkSetCommand extends BaseCommand {
     }
 
     @Override
+    public String getName() {
+        return "dil_link_set";
+    }
+
+    @Override
     public void checkArgs(String[] args) throws CommandException {
         if (args.length != 1) {
             throw new CommandException("формат: dil_link_set <series_id>");
@@ -29,7 +36,7 @@ public final class DilLinkSetCommand extends BaseCommand {
         try {
             seriesId = Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число");
+            throw new CommandException("series_id не число", e);
         }
         this.cachedSeriesId = seriesId;
     }
@@ -55,7 +62,7 @@ public final class DilLinkSetCommand extends BaseCommand {
     }
 
     @Override
-    public void execute(String[] args) throws CommandException {
+    public void execute(Environment environment, String[] args) throws CommandException {
         long seriesId = cachedSeriesId;
 
         DilutionSourceType type = parseSourceTypeOrNull(cachedType);

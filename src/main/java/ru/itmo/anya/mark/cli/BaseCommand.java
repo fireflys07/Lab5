@@ -1,5 +1,8 @@
 package ru.itmo.anya.mark.cli;
 
+import ru.itmo.anya.mark.interpreter.Command;
+import ru.itmo.anya.mark.interpreter.Environment;
+
 /**
  * Базовая команда с доступом к общему Environment.
  */

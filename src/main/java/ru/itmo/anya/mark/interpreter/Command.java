@@ -3,28 +3,29 @@ package ru.itmo.anya.mark.interpreter;
 import java.util.Scanner;
 
 public abstract class Command {
-    private final String name;
-    private final String help;
-    private final boolean requiresAdditionalInput;
-
-    public Command(String name, String help, boolean requiresAdditionalInput) {
-        this.name = name;
-        this.help = help;
-        this.requiresAdditionalInput = requiresAdditionalInput;
-    }
-    public String getName() {
-        return name;
-    }
-    public final String getHelp() {
-        return help;
-    }
-    public final boolean isRequiresAdditionalInput() {
-        return requiresAdditionalInput;
+    private final boolean reqAdditionalInput;
+    protected Command(boolean reqAdditionalInput) {
+        this.reqAdditionalInput = reqAdditionalInput;
     }
 
-    public abstract void execute(Environment env, String[] args) throws CommandArgsException;
-    public void checkArgs(String[] args) throws CommandArgsException {
+    public boolean isReqAdditionalInput() {
+        return reqAdditionalInput;
     }
-    public void additionalInput(Environment environment, Scanner scanner) {
+    public void checkArgs(String[] args) throws CommandException {
+        // по умолчанию ничего не проверяем
+    }
+    public void readAdditionalInput(Environment env) throws CommandException {
+        // по умолчанию не нужен
+    }
+    public abstract void execute(Environment environment, String[] args) throws CommandException;
+
+    public abstract String getName();
+
+    public String getDescription() {
+        return "Нет описания";
+    }
+
+    public String getHelp() {
+        return "Нет справки";
     }
 }

@@ -1,6 +1,8 @@
 package ru.itmo.anya.mark.command;
 
 import ru.itmo.anya.mark.cli.BaseCommand;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionSeries;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 
@@ -8,6 +10,11 @@ public final class DilSeriesCreateCommand extends BaseCommand {
 
     public DilSeriesCreateCommand(Environment env) {
         super(env, true);
+    }
+
+    @Override
+    public String getName() {
+        return "dil_series_create";
     }
 
     @Override
@@ -26,7 +33,7 @@ public final class DilSeriesCreateCommand extends BaseCommand {
     }
 
     @Override
-    public void execute(String[] args) throws CommandException {
+    public void execute(Environment environment, String[] args) throws CommandException {
         String name = env.getScanner().nextLine();
         try {
             DilutionSeries series = env.getService().createSeries(name, DilutionSourceType.SAMPLE, 1L, "SYSTEM");

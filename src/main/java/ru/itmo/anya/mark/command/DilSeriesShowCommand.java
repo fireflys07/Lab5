@@ -1,12 +1,19 @@
 package ru.itmo.anya.mark.command;
 
 import ru.itmo.anya.mark.cli.BaseCommand;
+import ru.itmo.anya.mark.interpreter.CommandException;
+import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionSeries;
 
 public final class DilSeriesShowCommand extends BaseCommand {
 
     public DilSeriesShowCommand(Environment env) {
         super(env, false);
+    }
+
+    @Override
+    public String getName() {
+        return "dil_series_command";
     }
 
     @Override
@@ -17,12 +24,12 @@ public final class DilSeriesShowCommand extends BaseCommand {
         try {
             Long.parseLong(args[0]);
         } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число");
+            throw new CommandException("series_id не число", e);
         }
     }
 
     @Override
-    public void execute(String[] args) throws CommandException {
+    public void execute(Environment environment, String[] args) throws CommandException {
         long id = Long.parseLong(args[0]);
 
         try {
@@ -31,7 +38,7 @@ public final class DilSeriesShowCommand extends BaseCommand {
             System.out.println("DilutionSeries #" + s.getId());
             System.out.println("steps: " + stepsCount);
         } catch (IllegalArgumentException e) {
-            throw new CommandException(e.getMessage());
+            throw new CommandException(e.getMessage(), e;
         }
     }
 
