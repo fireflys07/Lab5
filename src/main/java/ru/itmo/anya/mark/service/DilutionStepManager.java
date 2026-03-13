@@ -110,7 +110,7 @@ public class DilutionStepManager {
         // Потом сохраняем все данные в файл
         saveToFile();
 
-        System.out.println("✅ Шаг добавлен и данные сохранены в файл");
+        System.out.println(" Шаг добавлен");
     }
 }
 
