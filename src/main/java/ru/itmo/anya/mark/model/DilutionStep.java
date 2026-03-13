@@ -12,9 +12,9 @@ public final class DilutionStep implements Serializable {
     public long seriesId;
     // Номер шага (1, 2, 3...). Должен быть > 0
     public int stepNumber;
-    // Коэффициент разбавления (например 10 означает “в 10 раз”). Должен быть > 0
+    // Коэффициент разбавления (например 10 означает "в 10 раз"). Должен быть > 0
     public double factor;
-    // Итоговый объём/масса на этом шаге (например 100 mL). Должен быть > 0
+    // Итоговый объем/масса на этом шаге (например 100 mL). Должен быть > 0
     public double finalQuantity;
     // Единицы итогового количества (обычно mL).
     public FinalQuantityUnit finalUnit;

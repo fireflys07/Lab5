@@ -93,7 +93,7 @@ public final class DilutionSeries implements Serializable {
     }
 
     public void setUpdatedAt(Instant updatedAt) {
-        if (ownerUsername != null || !ownerUsername.trim().isEmpty()) {
+        if (ownerUsername != null && !ownerUsername.trim().isEmpty()) {
             this.updatedAt = updatedAt;
         } else {
             throw new IllegalArgumentException("Имя владельца серии не может быть пустым");
