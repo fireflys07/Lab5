@@ -1,9 +1,10 @@
-package ru.itmo.anya.mark.cli;
+package ru.itmo.anya.mark.service;
 
 
-import ru.itmo.anya.mark.model.*;
-import ru.itmo.anya.mark.service.DilutionStepManager;
-import ru.itmo.anya.mark.service.SeriesCollectionManager;
+import ru.itmo.anya.mark.model.DilutionSeries;
+import ru.itmo.anya.mark.model.DilutionSourceType;
+import ru.itmo.anya.mark.model.DilutionStep;
+import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
 import java.time.Instant;
 import java.util.ArrayList;

@@ -1,7 +1,6 @@
 package ru.itmo.anya.mark.command;
 
 import ru.itmo.anya.mark.cli.BaseCommand;
-import ru.itmo.anya.mark.cli.Environment;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 
 import java.util.Locale;

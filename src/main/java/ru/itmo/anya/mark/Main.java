@@ -3,7 +3,7 @@ package ru.itmo.anya.mark;
 import ru.itmo.anya.mark.service.CommandLineInterface;
 import ru.itmo.anya.mark.service.DilutionStepManager;
 import ru.itmo.anya.mark.service.SeriesCollectionManager;
-import ru.itmo.anya.mark.cli.DilutionService;
+import ru.itmo.anya.mark.service.DilutionService;
 
 import java.util.Scanner;
 

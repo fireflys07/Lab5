@@ -1,36 +1,36 @@
 package ru.itmo.anya.mark.interpreter;
 
-public class Environment {
-    private final MeasurementParamManager paramManager;
-    private final QCCheckManager checkManager;
-    private final QCLimitManager limitManager;
-    private final QCPlanManager planManager;
-    private final SampleManager sampleManager;
+import ru.itmo.anya.mark.service.CommandLineInterface;
+import ru.itmo.anya.mark.service.DilutionService;
+import ru.itmo.anya.mark.service.DilutionStepManager;
+import ru.itmo.anya.mark.service.SeriesCollectionManager;
 
-    public  Environment(MeasurementParamManager paramManager,
-                        QCCheckManager checkManager,
-                        QCLimitManager limitManager,
-                        QCPlanManager planManager,
-                        SampleManager sampleManager) {
-        this.paramManager = paramManager;
-        this.checkManager = checkManager;
-        this.limitManager = limitManager;
-        this.planManager = planManager;
-        this.sampleManager = sampleManager;
+public class Environment {
+    private final SeriesCollectionManager seriesCollectionManager;
+    private final DilutionStepManager dilutionStepManager;
+    private final DilutionService dilutionService;
+    private final CommandLineInterface commandLineInterface;
+
+    public Environment(SeriesCollectionManager seriesCollectionManager,
+                       DilutionStepManager dilutionStepManager,
+                       DilutionService dilutionService,
+                       CommandLineInterface commandLineInterface) {
+        this.seriesCollectionManager = seriesCollectionManager;
+        this.dilutionStepManager = dilutionStepManager;
+        this.dilutionService = dilutionService;
+        this.commandLineInterface = commandLineInterface;
     }
-    public MeasurementParamManager getParamManager() {
-        return paramManager;
+
+    public SeriesCollectionManager getSeriesCollectionManager() {
+        return seriesCollectionManager;
     }
-    public QCCheckManager getCheckManager() {
-        return checkManager;
+    public DilutionStepManager getDilutionStepManager() {
+        return dilutionStepManager;
     }
-    public QCLimitManager getLimitManager() {
-        return limitManager;
+    public DilutionService getDilutionService() {
+        return dilutionService;
     }
-    public QCPlanManager getPlanManager() {
-        return planManager;
-    }
-    public SampleManager getSampleManager() {
-        return sampleManager;
+    public CommandLineInterface getCommandLineInterface() {
+        return commandLineInterface;
     }
 }
