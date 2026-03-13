@@ -1,4 +1,6 @@
-package ru.itmo.anya.mark.cli;
+package ru.itmo.anya.mark.command;
+
+import ru.itmo.anya.mark.cli.Command;
 
 public final class ExitCommand extends Command {
 
