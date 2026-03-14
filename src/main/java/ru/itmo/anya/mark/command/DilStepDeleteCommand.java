@@ -34,7 +34,7 @@ public class DilStepDeleteCommand extends BaseCommand {
 
         // Парсинг ID шага
         try {
-            // ✅ Используем валидатор
+
             cachedStepId = Validators.validateId(args[0]);
         } catch (ValidationException e) {
             throw new CommandException(e.getMessage());
