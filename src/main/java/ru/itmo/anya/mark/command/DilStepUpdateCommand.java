@@ -124,8 +124,6 @@ public class DilStepUpdateCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "dil_step_update <step_id> field=value ... - обновить поля шага\n" +
-                "  Допустимые поля: factor (коэффициент), finalQuantity (итоговый объём)\n" +
-                "  Пример: dil_step_update 10 factor=5 finalQuantity=200";
+        return "dil_step_update <step_id> field=value ... - обновить поля шага\n";
     }
 }

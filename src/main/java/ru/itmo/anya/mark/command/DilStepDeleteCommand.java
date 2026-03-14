@@ -71,7 +71,6 @@ public class DilStepDeleteCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "dil_step_delete <step_id> - удалить шаг разбавления\n" +
-                "  Пример: dil_step_delete 10";
+        return "dil_step_delete <step_id> - удалить шаг разбавления\n";
     }
 }

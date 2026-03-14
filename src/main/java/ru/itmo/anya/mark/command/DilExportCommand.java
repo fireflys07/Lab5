@@ -65,12 +65,8 @@ public class DilExportCommand extends BaseCommand {
         }
     }
 
-    /**
-     * @return подробная справка по использованию команды
-     */
     @Override
     public String getHelp() {
-        return "dil_export <series_id> - экспортировать серию разбавлений в текст\n" +
-                "  Пример: dil_export 1";
+        return "dil_export <series_id> - экспортировать серию разбавлений в текст\n";
     }
 }
