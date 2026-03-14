@@ -16,7 +16,7 @@ public class DilStepUpdateCommand extends BaseCommand {
     private final Map<String, String> cachedUpdates = new HashMap<>();
 
     public DilStepUpdateCommand(Environment env) {
-        super(env, false); // false - команда не требует дополнительного ввода
+        super(env, false);
     }
 
     @Override

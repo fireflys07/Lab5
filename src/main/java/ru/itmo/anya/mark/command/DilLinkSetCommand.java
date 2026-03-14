@@ -48,22 +48,34 @@ public final class DilLinkSetCommand extends BaseCommand {
 
     @Override
     public void readAdditionalInput(Environment env) throws CommandException {
-        try {
+        // Читаем и валидируем тип источника до успешного ввода
+        while (true) {
             System.out.print("Источник (SAMPLE|SOLUTION): ");
             if (!env.getScanner().hasNextLine()) {
                 throw new CommandException("не удалось прочитать тип");
             }
             String rawType = env.getScanner().nextLine().trim();
-            this.cachedType = Validators.validateSourceType(rawType);
+            try {
+                this.cachedType = Validators.validateSourceType(rawType);
+                break;
+            } catch (ValidationException e) {
+                System.out.println("Ошибка команды: " + e.getMessage());
+            }
+        }
 
+        // Читаем и валидируем ID источника до успешного ввода
+        while (true) {
             System.out.print("ID источника: ");
             if (!env.getScanner().hasNextLine()) {
                 throw new CommandException("не удалось прочитать id");
             }
             String rawSourceId = env.getScanner().nextLine().trim();
-            this.cachedSourceId = Validators.validateId(rawSourceId);
-        } catch (ValidationException e) {
-            throw new CommandException(e.getMessage());
+            try {
+                this.cachedSourceId = Validators.validateId(rawSourceId);
+                break;
+            } catch (ValidationException e) {
+                System.out.println("Ошибка команды: " + e.getMessage());
+            }
         }
     }
 

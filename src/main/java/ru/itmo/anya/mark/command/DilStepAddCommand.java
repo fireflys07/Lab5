@@ -39,23 +39,53 @@ public final class DilStepAddCommand extends BaseCommand {
 
     @Override
     public void readAdditionalInput(Environment env) throws CommandException {
-        System.out.print("Шаг номер: ");
-        if (!env.getScanner().hasNextLine()) {
-            throw new CommandException("не удалось прочитать stepNumber");
+        // Читаем и валидируем номер шага с повторной попыткой
+        int stepNumber;
+        while (true) {
+            System.out.print("Шаг номер: ");
+            if (!env.getScanner().hasNextLine()) {
+                throw new CommandException("не удалось прочитать stepNumber");
+            }
+            String rawStepNumber = env.getScanner().nextLine().trim();
+            try {
+                stepNumber = Validators.validateStepNumber(rawStepNumber);
+                break;
+            } catch (ValidationException e) {
+                System.out.println("Ошибка валидации: " + e.getMessage());
+            }
         }
-        String rawStepNumber = env.getScanner().nextLine().trim();
 
-        System.out.print("Коэффициент (например 10): ");
-        if (!env.getScanner().hasNextLine()) {
-            throw new CommandException("не удалось прочитать factor");
+        // Читаем и валидируем коэффициент с повторной попыткой
+        double factor;
+        while (true) {
+            System.out.print("Коэффициент (например 10): ");
+            if (!env.getScanner().hasNextLine()) {
+                throw new CommandException("не удалось прочитать factor");
+            }
+            String rawFactor = env.getScanner().nextLine().trim();
+            try {
+                factor = Validators.validatePositiveNumber(rawFactor, "коэффициент");
+                break;
+            } catch (ValidationException e) {
+                System.out.println("Ошибка валидации: " + e.getMessage());
+            }
         }
-        String rawFactor = env.getScanner().nextLine().trim();
 
-        System.out.print("Итоговый объём: ");
-        if (!env.getScanner().hasNextLine()) {
-            throw new CommandException("не удалось прочитать finalQuantity");
+        // Читаем и валидируем итоговый объём с повторной попыткой
+        double finalQty;
+        while (true) {
+            System.out.print("Итоговый объём: ");
+            if (!env.getScanner().hasNextLine()) {
+                throw new CommandException("не удалось прочитать finalQuantity");
+            }
+            String rawFinalQty = env.getScanner().nextLine().trim();
+            try {
+                finalQty = Validators.validatePositiveNumber(rawFinalQty, "finalQuantity");
+                break;
+            } catch (ValidationException e) {
+                System.out.println("Ошибка валидации: " + e.getMessage());
+            }
         }
-        String rawFinalQty = env.getScanner().nextLine().trim();
 
         System.out.print("Единицы (mL): ");
         if (!env.getScanner().hasNextLine()) {
@@ -65,15 +95,15 @@ public final class DilStepAddCommand extends BaseCommand {
 
         // сохраняем во временные поля для execute
         this.cachedSeriesId = null; // будет установлен в execute на основе args
-        this.cachedStepNumber = rawStepNumber;
-        this.cachedFactor = rawFactor;
-        this.cachedFinalQty = rawFinalQty;
+        this.cachedStepNumber = stepNumber;
+        this.cachedFactor = factor;
+        this.cachedFinalQty = finalQty;
         this.cachedUnit = rawUnit;
     }
 
-    private String cachedStepNumber;
-    private String cachedFactor;
-    private String cachedFinalQty;
+    private int cachedStepNumber;
+    private double cachedFactor;
+    private double cachedFinalQty;
     private String cachedUnit;
 
     @Override
@@ -86,20 +116,9 @@ public final class DilStepAddCommand extends BaseCommand {
         }
         this.cachedSeriesId = seriesId;
 
-        int stepNumber;
-        double factor;
-        double finalQty;
-        try {
-            stepNumber = Integer.parseInt(cachedStepNumber);
-            factor = Double.parseDouble(cachedFactor);
-            finalQty = Double.parseDouble(cachedFinalQty);
-        } catch (NumberFormatException e) {
-            throw new CommandException("коэффициент/объём не числа", e);
-        }
-
-        if (factor <= 0) {
-            throw new CommandException("коэффициент <=0");
-        }
+        int stepNumber = cachedStepNumber;
+        double factor = cachedFactor;
+        double finalQty = cachedFinalQty;
 
         FinalQuantityUnit unit = parseUnitOrNull(cachedUnit);
         if (unit == null) {
@@ -113,8 +132,10 @@ public final class DilStepAddCommand extends BaseCommand {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
             if (msg.contains("series")) {
                 throw new CommandException("series не найден");
-            } else if (msg.contains("factor") || msg.contains("finalquantity")) {
+            } else if (msg.contains("factor")) {
                 throw new CommandException("коэффициент <=0");
+            } else if (msg.contains("finalquantity")) {
+                throw new CommandException("итоговый объём <=0");
             } else {
                 throw new CommandException(e.getMessage());
             }
