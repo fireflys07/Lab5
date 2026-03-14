@@ -20,7 +20,7 @@ public class DilutionService {
         this.seriesManager = seriesManager;
         this.stepManager = stepManager;
     }
-
+    // 7) dil_calc – возвращает список концентраций по шагам
     public List<Double> calculateConcentrations(long seriesId, double startConc) {
         // Получаем серию
         DilutionSeries series = seriesManager.getById(seriesId);
@@ -48,7 +48,7 @@ public class DilutionService {
 
         return results;
     }
-
+    // 8) dil_step_update
     public void updateStepFactor(long stepId, double factor) {
         if (factor <= 0) {
             throw new IllegalArgumentException("Factor must be positive");
@@ -74,7 +74,7 @@ public class DilutionService {
 
         step.setFinalQuantity(quantity);
     }
-
+    // 9) dil_step_delete
     public DilutionStep getStepById(long stepId) {
         return stepManager.getById(stepId);
     }
@@ -87,6 +87,41 @@ public class DilutionService {
 
         stepManager.remove(stepId);
         System.out.println("Шаг с ID " + stepId + " удалён из хранилища");
+    }
+
+    // 10) dil_export
+    public String exportSeries(long seriesId) {
+        DilutionSeries series = seriesManager.getById(seriesId);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия с ID " + seriesId + " не найдена");
+        }
+
+        List<DilutionStep> steps = stepManager.getStepsBySeriesId(seriesId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Dilution Series #").append(seriesId).append(" ===\n");
+        sb.append("Name: ").append(series.getName()).append("\n");
+        sb.append("Owner: ").append(series.getOwnerUsername()).append("\n");
+
+        if (series.getSourceType() != null) {
+            sb.append("Source: ").append(series.getSourceType())
+                    .append(" #").append(series.getSourceId()).append("\n");
+        }
+
+        sb.append("\nSteps:\n");
+        sb.append(String.format("%-6s %-6s %-8s %-10s %s\n",
+                "ID", "Step", "Factor", "Quantity", "Unit"));
+
+        for (DilutionStep step : steps) {
+            sb.append(String.format("%-6d %-6d %-8.2f %-10.2f %s\n",
+                    step.getId(),
+                    step.getStepNumber(),
+                    step.getFactor(),
+                    step.getFinalQuantity(),
+                    step.getFinalUnit()));
+        }
+
+        return sb.toString();
     }
 
     // 1) dil_series_create – только валидация
@@ -182,52 +217,5 @@ public class DilutionService {
         }
         s.setSourceType(type);
         s.setSourceId(sourceId);
-    }
-
-    // 7) dil_calc – возвращает список концентраций по шагам
-    public List<Double> calcConcentrations(long seriesId, double startConc) {
-        // Проверяем, что серия существует
-        getSeries(seriesId);
-
-        if (startConc <= 0) {
-            throw new IllegalArgumentException("start_conc: должен быть > 0");
-        }
-
-        List<DilutionStep> steps = listSteps(seriesId);
-        if (steps.isEmpty()) {
-            throw new IllegalArgumentException("у серии нет шагов");
-        }
-
-        // сортируем шаги по номеру, чтобы концентрации считались последовательно
-        steps.sort(Comparator.comparingInt(DilutionStep::getStepNumber));
-
-        List<Double> concentrations = new ArrayList<>();
-        double current = startConc;
-        for (DilutionStep step : steps) {
-            current = current / step.getFactor();
-            concentrations.add(current);
-        }
-
-        return concentrations;
-    }
-
-    // 8) dil_step_update
-    public void updateStep(long stepId, Double factor, Double finalQuantity) {
-        DilutionStep step = stepManager.getById(stepId);
-        if (step == null) {
-            throw new IllegalArgumentException("step: не найден");
-        }
-        if (factor != null) {
-            if (factor <= 0) {
-                throw new IllegalArgumentException("factor <= 0");
-            }
-            step.setFactor(factor);
-        }
-        if (finalQuantity != null) {
-            if (finalQuantity <= 0) {
-                throw new IllegalArgumentException("finalQuantity <= 0");
-            }
-            step.setFinalQuantity(finalQuantity);
-        }
     }
 }
