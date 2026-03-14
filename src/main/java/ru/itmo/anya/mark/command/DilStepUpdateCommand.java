@@ -124,6 +124,6 @@ public class DilStepUpdateCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "dil_step_update <step_id> field=value ... - обновить поля шага";
+        return "обновить поля шага";
     }
 }

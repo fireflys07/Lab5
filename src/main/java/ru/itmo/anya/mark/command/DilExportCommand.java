@@ -67,6 +67,6 @@ public class DilExportCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "dil_export <series_id> - экспортировать серию разбавлений в текст";
+        return "экспортировать серию разбавлений в текст";
     }
 }

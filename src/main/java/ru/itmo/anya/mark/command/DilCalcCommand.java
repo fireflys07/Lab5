@@ -63,6 +63,6 @@ public class DilCalcCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "dil_calc <series_id> <start_conc> <unit> - посчитать концентрации по шагам";
+        return "посчитать концентрации по шагам";
     }
 }
