@@ -2,6 +2,8 @@ package ru.itmo.anya.mark.model;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class DilutionSeries implements Serializable {

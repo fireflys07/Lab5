@@ -38,7 +38,7 @@ public final class DilSeriesShowCommand extends BaseCommand {
             System.out.println("DilutionSeries #" + s.getId());
             System.out.println("steps: " + stepsCount);
         } catch (IllegalArgumentException e) {
-            throw new CommandException(e.getMessage(), e;
+            throw new CommandException(e.getMessage(), e);
         }
     }
 

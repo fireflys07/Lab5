@@ -21,6 +21,34 @@ public class DilutionService {
         this.stepManager = stepManager;
     }
 
+    public List<Double> calculateConcentrations(long seriesId, double startConc) {
+        // Получаем серию
+        DilutionSeries series = seriesManager.getById(seriesId);
+        if (series == null) {
+            throw new IllegalArgumentException("Series not found: " + seriesId);
+        }
+
+        // Получаем шаги серии
+        List<DilutionStep> steps = stepManager.getStepsBySeriesId(seriesId);
+        if (steps.isEmpty()) {
+            throw new IllegalArgumentException("Series has no dilution steps");
+        }
+
+        // Сортируем шаги по номеру
+        steps.sort((s1, s2) -> Integer.compare(s1.getStepNumber(), s2.getStepNumber()));
+
+        // Рассчитываем концентрации
+        List<Double> results = new ArrayList<>();
+        double currentConc = startConc;
+
+        for (DilutionStep step : steps) {
+            currentConc = currentConc / step.getFactor();
+            results.add(currentConc);
+        }
+
+        return results;
+    }
+
     // 1) dil_series_create – только валидация
     public DilutionSeries createSeries(String name, DilutionSourceType sourceType, long sourceId, String ownerUsername) {
         if (name == null || name.trim().isEmpty() || name.length() > 128) {

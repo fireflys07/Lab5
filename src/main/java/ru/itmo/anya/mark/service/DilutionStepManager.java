@@ -4,6 +4,7 @@ import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DilutionStepManager {
 
@@ -21,6 +22,12 @@ public class DilutionStepManager {
 
     public DilutionStep getById(long id) {
         return storage.get(id);
+    }
+
+    public List<DilutionStep> getStepsBySeriesId(long seriesId) {
+        return storage.values().stream()
+                .filter(step -> step.getSeriesId() == seriesId)
+                .collect(Collectors.toList());
     }
 
     public Collection<DilutionStep> getAll() {
