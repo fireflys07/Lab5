@@ -4,8 +4,12 @@ import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionSeries;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 public final class DilSeriesShowCommand extends BaseCommand {
+
+    private long cachedSeriesId;
 
     public DilSeriesShowCommand(Environment env) {
         super(env, false);
@@ -22,9 +26,9 @@ public final class DilSeriesShowCommand extends BaseCommand {
             throw new CommandException("формат: dil_series_show <series_id>");
         }
         try {
-            Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число", e);
+            cachedSeriesId = Validators.validateId(args[0]);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
     }
 

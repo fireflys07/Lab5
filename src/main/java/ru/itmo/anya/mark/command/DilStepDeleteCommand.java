@@ -3,6 +3,8 @@ package ru.itmo.anya.mark.command;
 import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.Locale;
 
@@ -32,14 +34,10 @@ public class DilStepDeleteCommand extends BaseCommand {
 
         // Парсинг ID шага
         try {
-            cachedStepId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("step_id должен быть числом", e);
-        }
-
-        // Дополнительная проверка на положительное число
-        if (cachedStepId <= 0) {
-            throw new CommandException("step_id должен быть положительным числом");
+            // ✅ Используем валидатор
+            cachedStepId = Validators.validateId(args[0]);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
     }
 

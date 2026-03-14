@@ -3,6 +3,8 @@ package ru.itmo.anya.mark.command;
 import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.Locale;
 
@@ -32,14 +34,9 @@ public class DilExportCommand extends BaseCommand {
 
         // Парсинг ID серии
         try {
-            cachedSeriesId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("series_id должен быть числом", e);
-        }
-
-        // Дополнительная проверка на положительное число
-        if (cachedSeriesId <= 0) {
-            throw new CommandException("series_id должен быть положительным числом");
+            cachedSeriesId = Validators.validateId(args[0]);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
     }
 

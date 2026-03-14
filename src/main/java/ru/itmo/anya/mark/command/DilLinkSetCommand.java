@@ -4,6 +4,8 @@ import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionSourceType;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.Locale;
 import java.util.Set;
@@ -12,6 +14,9 @@ public final class DilLinkSetCommand extends BaseCommand {
 
     private final Set<Long> knownSampleIds;
     private final Set<Long> knownSolutionIds;
+    private Long cachedSeriesId;
+    private DilutionSourceType cachedType;
+    private Long cachedSourceId;
 
     public DilLinkSetCommand(Environment env,
                              Set<Long> knownSampleIds,
@@ -32,57 +37,56 @@ public final class DilLinkSetCommand extends BaseCommand {
             throw new CommandException("формат: dil_link_set <series_id>");
         }
 
-        long seriesId;
         try {
-            seriesId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число", e);
+            long seriesId = Validators.validateId(args[0]);
+            this.cachedSeriesId = seriesId;
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
-        this.cachedSeriesId = seriesId;
     }
 
-    private long cachedSeriesId;
-    private String cachedType;
-    private String cachedSourceId;
 
     @Override
     public void readAdditionalInput(Environment env) throws CommandException {
-        System.out.print("Источник (SAMPLE|SOLUTION): ");
-        if (!env.getScanner().hasNextLine()) {
-            throw new CommandException("не удалось прочитать тип");
+        try {
+            System.out.print("Источник (SAMPLE|SOLUTION): ");
+            if (!env.getScanner().hasNextLine()) {
+                throw new CommandException("не удалось прочитать тип");
+            }
+            String rawType = env.getScanner().nextLine().trim();
+            this.cachedType = Validators.validateSourceType(rawType);
+
+            System.out.print("ID источника: ");
+            if (!env.getScanner().hasNextLine()) {
+                throw new CommandException("не удалось прочитать id");
+            }
+            String rawSourceId = env.getScanner().nextLine().trim();
+            this.cachedSourceId = Validators.validateId(rawSourceId);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
-        String rawType = env.getScanner().nextLine().trim();
-        System.out.print("ID источника: ");
-        if (!env.getScanner().hasNextLine()) {
-            throw new CommandException("не удалось прочитать id");
-        }
-        String rawSourceId = env.getScanner().nextLine().trim();
-        this.cachedType = rawType;
-        this.cachedSourceId = rawSourceId;
     }
 
     @Override
     public void execute(Environment environment, String[] args) throws CommandException {
-        long seriesId = cachedSeriesId;
-
-        DilutionSourceType type = parseSourceTypeOrNull(cachedType);
-        if (type == null) {
-            throw new CommandException("неизвестный тип");
+        if (cachedSeriesId == null) {
+            throw new CommandException("Ошибка: ID серии не был установлен");
+        }
+        if (cachedType == null) {
+            throw new CommandException("Ошибка: тип источника не был установлен");
+        }
+        if (cachedSourceId == null) {
+            throw new CommandException("Ошибка: ID источника не был установлен");
         }
 
-        long sourceId;
-        try {
-            sourceId = Long.parseLong(cachedSourceId);
-        } catch (NumberFormatException e) {
-            throw new CommandException("id не найден");
-        }
+        DilutionSourceType type = cachedType;
 
-        if (!isKnownSourceId(type, sourceId)) {
+        if (!isKnownSourceId(type, cachedSourceId)) {
             throw new CommandException("id не найден");
         }
 
         try {
-            env.getService().linkSource(seriesId, type, sourceId);
+            env.getService().linkSource(cachedSeriesId, type, cachedSourceId);
             System.out.println("OK");
         } catch (IllegalArgumentException e) {
             String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);

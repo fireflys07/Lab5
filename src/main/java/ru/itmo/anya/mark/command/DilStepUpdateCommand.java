@@ -3,6 +3,8 @@ package ru.itmo.anya.mark.command;
 import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -34,11 +36,10 @@ public class DilStepUpdateCommand extends BaseCommand {
             throw new CommandException("формат: dil_step_update <step_id> field=value ...");
         }
 
-        // Парсинг ID шага
         try {
-            cachedStepId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("step_id должен быть числом", e);
+            cachedStepId = Validators.validateId(args[0]);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
 
         // Очищаем предыдущие обновления

@@ -5,10 +5,14 @@ import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.Locale;
 
 public final class DilStepAddCommand extends BaseCommand {
+
+    private Long cachedSeriesId;
 
     public DilStepAddCommand(Environment env) {
         super(env, true);
@@ -27,9 +31,9 @@ public final class DilStepAddCommand extends BaseCommand {
 
         long seriesId;
         try {
-            seriesId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число", e);
+            cachedSeriesId = Validators.validateId(args[0]);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
     }
 
@@ -67,7 +71,6 @@ public final class DilStepAddCommand extends BaseCommand {
         this.cachedUnit = rawUnit;
     }
 
-    private Long cachedSeriesId;
     private String cachedStepNumber;
     private String cachedFactor;
     private String cachedFinalQty;

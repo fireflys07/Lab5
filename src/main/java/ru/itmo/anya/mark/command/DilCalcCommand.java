@@ -3,6 +3,8 @@ package ru.itmo.anya.mark.command;
 import ru.itmo.anya.mark.cli.BaseCommand;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
+import ru.itmo.anya.mark.validation.ValidationException;
+import ru.itmo.anya.mark.validation.Validators;
 
 import java.util.List;
 import java.util.Locale;
@@ -28,18 +30,13 @@ public class DilCalcCommand extends BaseCommand {
         }
 
         try {
-            cachedSeriesId = Long.parseLong(args[0]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("series_id не число", e);
-        }
+            cachedSeriesId = Validators.validateId(args[0]);
+            cachedStartConc = Validators.validatePositiveNumber(args[1], "start_conc");
+            cachedUnit = args[2];
 
-        try {
-            cachedStartConc = Double.parseDouble(args[1]);
-        } catch (NumberFormatException e) {
-            throw new CommandException("start_conc не число", e);
+        } catch (ValidationException e) {
+            throw new CommandException(e.getMessage());
         }
-
-        cachedUnit = args[2];
     }
 
     @Override
