@@ -17,8 +17,7 @@ public class Environment {
     public Environment(SeriesCollectionManager seriesCollectionManager,
                        DilutionStepManager dilutionStepManager,
                        DilutionService dilutionService,
-                       CommandLineInterface commandLineInterface,
-                       Scanner scanner) {
+                       CommandLineInterface commandLineInterface) {
         this.seriesCollectionManager = seriesCollectionManager;
         this.dilutionStepManager = dilutionStepManager;
         this.dilutionService = dilutionService;

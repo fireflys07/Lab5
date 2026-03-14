@@ -31,10 +31,13 @@ public final class CommandLineInterface {
         }
 
         this.scanner = scanner;
-        this.env = new Environment(seriesCollectionManager,
+        this.env = new Environment(
+                seriesCollectionManager,
                 dilutionStepManager,
                 dilutionService,
-                this);
+                this
+        );
+
         registerCommands();
     }
 
