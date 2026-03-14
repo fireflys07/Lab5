@@ -11,6 +11,7 @@ public class CommandInterpreter {
     private final Map<String, Command> commands = new LinkedHashMap<>();
     private final Environment environment;
     private final Scanner scanner;
+    private boolean running = true;
 
     public CommandInterpreter(Environment environment, Scanner scanner) {
         this.environment = environment;
@@ -23,8 +24,11 @@ public class CommandInterpreter {
     public Map<String, Command> getCommands() {
         return commands;
     }
+    public void stop() {
+        this.running = false;
+    }
     public void run() {
-        while (true) {
+        while (running) {
             System.out.print("> ");
             if (!scanner.hasNext()) {
                 return;
