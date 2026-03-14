@@ -35,7 +35,8 @@ public final class CommandLineInterface {
                 seriesCollectionManager,
                 dilutionStepManager,
                 dilutionService,
-                this
+                this,
+                scanner
         );
 
         registerCommands();
