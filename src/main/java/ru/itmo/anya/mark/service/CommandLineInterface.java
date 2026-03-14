@@ -51,6 +51,10 @@ public final class CommandLineInterface {
         commands.put("dil_step_add", new DilStepAddCommand(env));
         commands.put("dil_step_list", new DilStepListCommand(env));
         commands.put("dil_link_set", new DilLinkSetCommand(env, knownSampleIds, knownSolutionIds));
+        commands.put("dil_calc", new DilCalcCommand(env));
+        commands.put("dil_step_update", new DilStepUpdateCommand(env));    // команда 8
+        commands.put("dil_step_delete", new DilStepDeleteCommand(env));
+        commands.put("dil_export", new DilExportCommand(env));
         commands.put("help", new HelpCommand(commands));
         commands.put("exit", new ExitCommand(() -> running = false));
     }
