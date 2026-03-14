@@ -49,15 +49,6 @@ public class DilutionService {
         return results;
     }
 
-    // В DilutionService.java добавьте:
-
-    /**
-     * Обновление коэффициента разбавления шага.
-     *
-     * @param stepId ID шага
-     * @param factor новый коэффициент
-     * @throws IllegalArgumentException если шаг не найден или factor <= 0
-     */
     public void updateStepFactor(long stepId, double factor) {
         if (factor <= 0) {
             throw new IllegalArgumentException("Factor must be positive");
@@ -71,13 +62,6 @@ public class DilutionService {
         step.setFactor(factor);
     }
 
-    /**
-     * Обновление итогового объёма шага.
-     *
-     * @param stepId ID шага
-     * @param quantity новый объём
-     * @throws IllegalArgumentException если шаг не найден или quantity <= 0
-     */
     public void updateStepFinalQuantity(long stepId, double quantity) {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity must be positive");
@@ -89,6 +73,20 @@ public class DilutionService {
         }
 
         step.setFinalQuantity(quantity);
+    }
+
+    public DilutionStep getStepById(long stepId) {
+        return stepManager.getById(stepId);
+    }
+
+    public void deleteStep(long stepId) {
+        DilutionStep step = stepManager.getById(stepId);
+        if (step == null) {
+            throw new IllegalArgumentException("Step not found: " + stepId);
+        }
+
+        stepManager.remove(stepId);
+        System.out.println("Шаг с ID " + stepId + " удалён из хранилища");
     }
 
     // 1) dil_series_create – только валидация
@@ -232,10 +230,4 @@ public class DilutionService {
             step.setFinalQuantity(finalQuantity);
         }
     }
-
-    // 9) dil_step_delete
-    public void deleteStep(long stepId) {
-        stepManager.remove(stepId);
-    }
-
-    }
+}
