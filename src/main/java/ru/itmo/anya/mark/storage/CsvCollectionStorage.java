@@ -1,5 +1,6 @@
 package ru.itmo.anya.mark.storage;
 
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 
@@ -26,9 +27,12 @@ public class CsvCollectionStorage<T> extends AbstractFileStorage<T> {
     @Override
     public List<T> load(Path path) throws Exception {
         CsvSchema schema = csvMapper.schemaFor(clazz).withHeader();
-        return csvMapper.readerFor(clazz)
+        MappingIterator<T> iterator = this.csvMapper
+                .readerFor(this.clazz)
                 .with(schema)
-                .readValues(path.toFile())
-                .readAll();
+                .readValues(path.toFile());
+        List<T> list = iterator.readAll();
+        iterator.close();
+        return list;
     }
 }
