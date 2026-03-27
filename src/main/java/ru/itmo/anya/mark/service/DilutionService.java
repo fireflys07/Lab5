@@ -5,20 +5,33 @@ import ru.itmo.anya.mark.model.DilutionSeries;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
+import ru.itmo.anya.mark.storage.CollectionStorage;
+import ru.itmo.anya.mark.storage.CsvCollectionStorage;
+import ru.itmo.anya.mark.storage.FileValidator;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DilutionService {
 
     private final SeriesCollectionManager seriesManager;
     private final DilutionStepManager stepManager;
 
+    private final CollectionStorage<DilutionSeries> seriesStorage;
+    private final CollectionStorage<DilutionStep> stepStorage;
+
     public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager) {
         this.seriesManager = seriesManager;
         this.stepManager = stepManager;
+
+        this.seriesStorage = new CsvCollectionStorage<>(DilutionSeries.class);
+        this.stepStorage = new CsvCollectionStorage<>(DilutionStep.class);
+        FileValidator fileValidator = new FileValidator();
     }
     // 7) dil_calc – возвращает список концентраций по шагам
     public List<Double> calculateConcentrations(long seriesId, double startConc) {
@@ -217,5 +230,52 @@ public class DilutionService {
         }
         s.setSourceType(type);
         s.setSourceId(sourceId);
+    }
+
+    public void saveToCsv(String basePath) throws Exception {
+        Path base = Path.of(basePath);
+        Path seriesPath = base.resolveSibling(base.getFileName() + "_series.csv");
+        Path stepsPath = base.resolveSibling(base.getFileName() + "_step.csv");
+
+        seriesStorage.save(seriesManager.getSeries(), seriesPath);
+        stepStorage.save(stepManager.getSteps(), stepsPath);
+    }
+
+    public void loadFromCsv(String basePath) throws Exception {
+        Path base = Path.of(basePath);
+        Path seriesPath = base.resolveSibling(base.getFileName() + "_series.csv");
+        Path stepsPath = base.resolveSibling(base.getFileName() + "_step.csv");
+
+        // Проверяем файлы
+        if (!Files.exists(seriesPath)) {
+            throw new Exception("Файл не найден: " + seriesPath);
+        }
+        if (!Files.exists(stepsPath)) {
+            throw new Exception("Файл не найден: " + stepsPath);
+        }
+
+        // Загружаем
+        List<DilutionSeries> loadedSeries = seriesStorage.load(seriesPath);
+        List<DilutionStep> loadedSteps = stepStorage.load(stepsPath);
+
+        // Проверяем целостность
+        Set<Long> seriesIds = new HashSet<>();
+        for (DilutionSeries s : loadedSeries) {
+            seriesIds.add(s.getId());
+        }
+
+        for (DilutionStep step : loadedSteps) {
+            if (!seriesIds.contains(step.getSeriesId())) {
+                throw new Exception("Шаг id=" + step.getId() +
+                        " ссылается на несуществующую серию: seriesId=" + step.getSeriesId());
+            }
+        }
+
+        // Заменяем данные
+        seriesManager.clear();
+        stepManager.clear();
+
+        seriesManager.addAll(loadedSeries);
+        stepManager.addAll(loadedSteps);
     }
 }

@@ -58,6 +58,8 @@ public final class CommandLineInterface {
         commands.put("dil_export", new DilExportCommand(env));
         commands.put("help", new HelpCommand(commands));
         commands.put("exit", new ExitCommand(() -> running = false));
+        commands.put("save", new SaveCommand(env));
+        commands.put("load", new LoadCommand(env));
     }
 
     public void run() {

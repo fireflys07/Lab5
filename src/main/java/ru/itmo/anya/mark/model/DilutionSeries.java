@@ -8,8 +8,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 @JsonPropertyOrder({"id", "name", "sourceType", "sourceId", "ownerUsername","createdAt", "updatedAt"})

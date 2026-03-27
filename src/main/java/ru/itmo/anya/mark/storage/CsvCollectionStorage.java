@@ -20,8 +20,8 @@ public class CsvCollectionStorage<T> extends AbstractFileStorage<T> {
     @Override
     public void save(List<T> items, Path path) throws Exception {
         super.ensureParentDirectoryExists(path);
-        CsvSchema schema = csvMapper.schemaFor(clazz).withHeader();
-        csvMapper.writer(schema).writeValue(path.toFile(), items);
+        CsvSchema schema = this.csvMapper.schemaFor(clazz).withHeader();
+        this.csvMapper.writer(schema).writeValue(path.toFile(), items);
     }
 
     @Override
