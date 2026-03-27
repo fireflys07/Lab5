@@ -12,9 +12,8 @@ import java.util.Set;
 
 public class FileValidator {
 
-    /**
-     * Проверить существование и доступность файла.
-     */
+    //Проверить существование и доступность файла.
+
     public void validateFileExists(Path path) throws Exception {
         if (!Files.exists(path)) {
             throw new Exception("Файл не существует: " + path);
@@ -27,9 +26,7 @@ public class FileValidator {
         }
     }
 
-    /**
-     * Валидировать загруженные серии и шаги.
-     */
+    //Валидировать загруженные серии и шаги.
     public void validateData(List<DilutionSeries> series, List<DilutionStep> steps) throws Exception {
         List<String> errors = new ArrayList<>();
 
