@@ -79,5 +79,19 @@ public class DilutionStepManager {
         add(step);
         System.out.println(" Шаг добавлен ");
     }
+
+    //Очистить все шаги из хранилища.
+    public void clear() {
+        storage.clear();
+    }
+
+    //Добавить несколько шагов сразу.
+    public void addAll(Collection<DilutionStep> stepsList) {
+        for (DilutionStep step : stepsList) {
+            if (step != null && !storage.containsKey(step.getId())) {
+                storage.put(step.getId(), step);
+            }
+        }
+    }
 }
 

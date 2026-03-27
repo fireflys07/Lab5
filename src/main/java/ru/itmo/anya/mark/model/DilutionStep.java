@@ -1,27 +1,48 @@
 package ru.itmo.anya.mark.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
+@JsonPropertyOrder({"id", "seriesId", "stepNumber", "factor", "finalQuantity", "finalUnit", "createdAt"})
 public final class DilutionStep implements Serializable {
     // Уникальный номер шага. Программа назначает сама.
+    @JsonProperty("id")
     public final long id;
     // К какой серии относится (id серии).
     //Должен ссылаться на реально существующий DilutionSeries.
+    @JsonProperty("seriesId")
     public long seriesId;
     // Номер шага (1, 2, 3...). Должен быть > 0
+    @JsonProperty("stepNumber")
     public int stepNumber;
     // Коэффициент разбавления (например 10 означает "в 10 раз"). Должен быть > 0
+    @JsonProperty("factor")
     public double factor;
     // Итоговый объем/масса на этом шаге (например 100 mL). Должен быть > 0
+    @JsonProperty("finalQuantity")
     public double finalQuantity;
     // Единицы итогового количества (обычно mL).
+    @JsonProperty("finalUnit")
     public FinalQuantityUnit finalUnit;
     // Когда шаг добавлен. Программа ставит автоматически.
+    @JsonProperty("createdAt")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     public final Instant createdAt;
 
-    public DilutionStep(long id, long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit finalUnit, Instant createdAt) {
+    public DilutionStep(
+            @JsonProperty("id") long id,
+            @JsonProperty("seriesId") long seriesId,
+            @JsonProperty("stepNumber") int stepNumber,
+            @JsonProperty("factor") double factor,
+            @JsonProperty("finalQuantity") double finalQuantity,
+            @JsonProperty("finalUnit") FinalQuantityUnit finalUnit,
+            @JsonProperty("createdAt") Instant createdAt){
         this.id = id;
         this.seriesId = seriesId;
         this.setStepNumber(stepNumber);
@@ -31,6 +52,7 @@ public final class DilutionStep implements Serializable {
         this.createdAt = createdAt;
     }
 
+    @JsonCreator
     public DilutionStep(long id, Instant createdAt) {
         this.id = id;
         this.createdAt = createdAt;

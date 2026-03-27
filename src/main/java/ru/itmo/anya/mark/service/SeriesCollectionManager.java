@@ -67,4 +67,18 @@ public class SeriesCollectionManager {
     public List<DilutionSeries> getSeries() {
         return new ArrayList<>(storage.values());
     }
+
+    //Очистить все серии из хранилища.
+    public void clear() {
+        storage.clear();
+    }
+
+    //Добавить несколько серий сразу.
+    public void addAll(Collection<DilutionSeries> seriesList) {
+        for (DilutionSeries series : seriesList) {
+            if (series != null && !storage.containsKey(series.getId())) {
+                storage.put(series.getId(), series);
+            }
+        }
+    }
 }
