@@ -35,6 +35,7 @@ public final class DilutionStep implements Serializable {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     public final Instant createdAt;
 
+    @JsonCreator
     public DilutionStep(
             @JsonProperty("id") long id,
             @JsonProperty("seriesId") long seriesId,
@@ -52,7 +53,7 @@ public final class DilutionStep implements Serializable {
         this.createdAt = createdAt;
     }
 
-    @JsonCreator
+
     public DilutionStep(long id, Instant createdAt) {
         this.id = id;
         this.createdAt = createdAt;

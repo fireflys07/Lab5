@@ -233,18 +233,16 @@ public class DilutionService {
     }
 
     public void saveToCsv(String basePath) throws Exception {
-        Path base = Path.of(basePath);
-        Path seriesPath = base.resolveSibling(base.getFileName() + "_series.csv");
-        Path stepsPath = base.resolveSibling(base.getFileName() + "_step.csv");
+        Path seriesPath = Path.of(basePath + "_series.csv");
+        Path stepsPath = Path.of(basePath + "_step.csv");
 
         seriesStorage.save(seriesManager.getSeries(), seriesPath);
         stepStorage.save(stepManager.getSteps(), stepsPath);
     }
 
     public void loadFromCsv(String basePath) throws Exception {
-        Path base = Path.of(basePath);
-        Path seriesPath = base.resolveSibling(base.getFileName() + "_series.csv");
-        Path stepsPath = base.resolveSibling(base.getFileName() + "_step.csv");
+        Path seriesPath = Path.of(basePath + "_series.csv");
+        Path stepsPath = Path.of(basePath + "_step.csv");
 
         // Проверяем файлы
         if (!Files.exists(seriesPath)) {
