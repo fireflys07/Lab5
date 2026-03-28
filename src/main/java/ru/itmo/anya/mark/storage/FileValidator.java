@@ -69,6 +69,9 @@ public class FileValidator {
     }
 
     private void validateSeries(DilutionSeries series) {
+        if (series.getId() <= 0) {
+            throw new IllegalArgumentException("поле id должно быть > 0");
+        }
         if (series.getName() == null || series.getName().trim().isEmpty()) {
             throw new IllegalArgumentException("поле name пустое");
         }
@@ -90,6 +93,9 @@ public class FileValidator {
     }
 
     private void validateStep(DilutionStep step) {
+        if (step.getId() <= 0) {
+            throw new IllegalArgumentException("поле id должно быть > 0, получено: " + step.getId());
+        }
         if (step.getStepNumber() <= 0) {
             throw new IllegalArgumentException("поле stepNumber должно быть > 0");
         }

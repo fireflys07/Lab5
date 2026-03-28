@@ -24,6 +24,7 @@ public class DilutionService {
 
     private final CollectionStorage<DilutionSeries> seriesStorage;
     private final CollectionStorage<DilutionStep> stepStorage;
+    private final FileValidator fileValidator;
 
     public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager) {
         this.seriesManager = seriesManager;
@@ -31,7 +32,7 @@ public class DilutionService {
 
         this.seriesStorage = new CsvCollectionStorage<>(DilutionSeries.class);
         this.stepStorage = new CsvCollectionStorage<>(DilutionStep.class);
-        FileValidator fileValidator = new FileValidator();
+        this.fileValidator = new FileValidator();
     }
     // 7) dil_calc – возвращает список концентраций по шагам
     public List<Double> calculateConcentrations(long seriesId, double startConc) {
@@ -255,6 +256,8 @@ public class DilutionService {
         // Загружаем
         List<DilutionSeries> loadedSeries = seriesStorage.load(seriesPath);
         List<DilutionStep> loadedSteps = stepStorage.load(stepsPath);
+
+        fileValidator.validateData(loadedSeries, loadedSteps);
 
         // Проверяем целостность
         Set<Long> seriesIds = new HashSet<>();
