@@ -3,6 +3,7 @@ package ru.itmo.anya.mark.storage;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -15,6 +16,7 @@ public class CsvCollectionStorage<T> extends AbstractFileStorage<T> {
     public CsvCollectionStorage(Class<T> clazz) {
         this.csvMapper = new CsvMapper();
         this.clazz = clazz;
+        this.csvMapper.registerModule(new JavaTimeModule());
     }
 
     @Override
