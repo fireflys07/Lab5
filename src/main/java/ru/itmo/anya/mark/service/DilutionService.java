@@ -15,16 +15,23 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class DilutionService {
+
+    /**
+     * Относительные пути для save/load складываются сюда (от текущей рабочей директории JVM),
+     * чтобы не засорять корень проекта. Абсолютные пути не меняются.
+     */
+    private static final String RELATIVE_DATA_ROOT = "data";
 
     private final SeriesCollectionManager seriesManager;
     private final DilutionStepManager stepManager;
 
     private final CollectionStorage<DilutionSeries> seriesStorage;
     private final CollectionStorage<DilutionStep> stepStorage;
-    private final FileValidator fileValidator;
 
     public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager) {
         this.seriesManager = seriesManager;
@@ -32,7 +39,7 @@ public class DilutionService {
 
         this.seriesStorage = new CsvCollectionStorage<>(DilutionSeries.class);
         this.stepStorage = new CsvCollectionStorage<>(DilutionStep.class);
-        this.fileValidator = new FileValidator();
+        FileValidator fileValidator = new FileValidator();
     }
     // 7) dil_calc – возвращает список концентраций по шагам
     public List<Double> calculateConcentrations(long seriesId, double startConc) {
@@ -233,17 +240,131 @@ public class DilutionService {
         s.setSourceId(sourceId);
     }
 
+    private static Path resolveCsvBasePath(String basePath) {
+        Path p = Path.of(basePath.trim());
+        if (p.isAbsolute()) {
+            return p.toAbsolutePath().normalize();
+        }
+        return Path.of(RELATIVE_DATA_ROOT).resolve(p).normalize();
+    }
+
+    /** База — путь .../stem (без суффикса); файлы в той же папке: stem_series.csv и stem_step.csv. */
+    private static Path csvSeriesFileNextToStem(Path stemBase) {
+        Path parent = stemBase.getParent();
+        String stem = stemBase.getFileName().toString();
+        return parent == null ? Path.of(stem + "_series.csv") : parent.resolve(stem + "_series.csv");
+    }
+
+    private static Path csvStepFileNextToStem(Path stemBase) {
+        Path parent = stemBase.getParent();
+        String stem = stemBase.getFileName().toString();
+        return parent == null ? Path.of(stem + "_step.csv") : parent.resolve(stem + "_step.csv");
+    }
+
+    /**
+     * Приводит ввод к «базе» пары файлов: {@code stem} → {@code stem_series.csv} и {@code stem_step.csv}
+     * в одной папке с {@code stem}.
+     * <ul>
+     *   <li>Путь, оканчивающийся на {@code *_series.csv} или {@code *_step.csv}, трактуется как один из файлов пары.</li>
+     *   <li>Если указан существующий каталог и {@code scanDirectory}, ищется единственная пара внутри него.</li>
+     * </ul>
+     */
+    private static Path resolveCsvPairBase(String basePath, boolean scanDirectory) throws Exception {
+        Path p = resolveCsvBasePath(basePath);
+        Path fileName = p.getFileName();
+        if (fileName != null) {
+            String name = fileName.toString();
+            String lc = name.toLowerCase(Locale.ROOT);
+            if (lc.endsWith("_series.csv")) {
+                String stem = name.substring(0, name.length() - "_series.csv".length());
+                Path parent = p.getParent();
+                return parent != null ? parent.resolve(stem) : Path.of(stem);
+            }
+            if (lc.endsWith("_step.csv")) {
+                String stem = name.substring(0, name.length() - "_step.csv".length());
+                Path parent = p.getParent();
+                return parent != null ? parent.resolve(stem) : Path.of(stem);
+            }
+        }
+        if (scanDirectory && Files.exists(p) && Files.isDirectory(p)) {
+            try {
+                return findSingleCsvPairBaseInDirectory(p);
+            } catch (Exception first) {
+                Path dataDir = p.resolve(RELATIVE_DATA_ROOT);
+                if (Files.isDirectory(dataDir)) {
+                    return findSingleCsvPairBaseInDirectory(dataDir);
+                }
+                throw first;
+            }
+        }
+        if (!scanDirectory && Files.exists(p) && Files.isDirectory(p)) {
+            throw new Exception("для save укажите базовое имя (например mydata), а не каталог");
+        }
+        return p;
+    }
+
+    private static Path findSingleCsvPairBaseInDirectory(Path dir) throws Exception {
+        List<Path> bases = new ArrayList<>();
+        try (Stream<Path> stream = Files.list(dir)) {
+            for (Path seriesFile : stream.toList()) {
+                if (!Files.isRegularFile(seriesFile)) {
+                    continue;
+                }
+                Path onlyName = seriesFile.getFileName();
+                if (onlyName == null) {
+                    continue;
+                }
+                String name = onlyName.toString();
+                String lower = name.toLowerCase(Locale.ROOT);
+                if (!lower.endsWith("_series.csv")) {
+                    continue;
+                }
+                String stem = name.substring(0, name.length() - "_series.csv".length());
+                Path stepFile = dir.resolve(stem + "_step.csv");
+                if (Files.exists(stepFile) && Files.isRegularFile(stepFile)) {
+                    bases.add(dir.resolve(stem));
+                }
+            }
+        }
+        if (bases.isEmpty()) {
+            throw new Exception("В каталоге нет пары файлов *_series.csv и *_step.csv: " + dir);
+        }
+        if (bases.size() > 1) {
+            throw new Exception("В каталоге несколько пар CSV — укажите базовое имя или путь к одному из файлов");
+        }
+        return bases.get(0);
+    }
+
+    /**
+     * Базовый путь пары файлов (для сообщений в UI).
+     * {@code scanDirectory} — как в {@link #loadFromCsv}: искать единственную пару в каталоге.
+     */
+    public Path resolveCsvDataPath(String basePath, boolean scanDirectory) throws Exception {
+        return resolveCsvPairBase(basePath, scanDirectory);
+    }
+
+    /** Пути к CSV для уже вычисленной базы stem (как в {@link #resolveCsvDataPath}). */
+    public Path getCsvSeriesPathFromStem(Path stemBase) {
+        return csvSeriesFileNextToStem(stemBase);
+    }
+
+    public Path getCsvStepPathFromStem(Path stemBase) {
+        return csvStepFileNextToStem(stemBase);
+    }
+
     public void saveToCsv(String basePath) throws Exception {
-        Path seriesPath = Path.of(basePath + "_series.csv");
-        Path stepsPath = Path.of(basePath + "_step.csv");
+        Path base = resolveCsvPairBase(basePath, false);
+        Path seriesPath = csvSeriesFileNextToStem(base);
+        Path stepsPath = csvStepFileNextToStem(base);
 
         seriesStorage.save(seriesManager.getSeries(), seriesPath);
         stepStorage.save(stepManager.getSteps(), stepsPath);
     }
 
     public void loadFromCsv(String basePath) throws Exception {
-        Path seriesPath = Path.of(basePath + "_series.csv");
-        Path stepsPath = Path.of(basePath + "_step.csv");
+        Path base = resolveCsvPairBase(basePath, true);
+        Path seriesPath = csvSeriesFileNextToStem(base);
+        Path stepsPath = csvStepFileNextToStem(base);
 
         // Проверяем файлы
         if (!Files.exists(seriesPath)) {
@@ -256,8 +377,6 @@ public class DilutionService {
         // Загружаем
         List<DilutionSeries> loadedSeries = seriesStorage.load(seriesPath);
         List<DilutionStep> loadedSteps = stepStorage.load(stepsPath);
-
-        fileValidator.validateData(loadedSeries, loadedSteps);
 
         // Проверяем целостность
         Set<Long> seriesIds = new HashSet<>();

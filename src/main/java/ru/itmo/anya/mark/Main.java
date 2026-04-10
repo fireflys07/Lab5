@@ -55,6 +55,8 @@ public class Main {
         interpreter.register(new DilLinkSetCommand(environment, knownSampleIds, knownSolutionIds));
         interpreter.register(new DilCalcCommand(environment));
         interpreter.register(new DilExportCommand(environment));
+        interpreter.register(new SaveCommand(environment));
+        interpreter.register(new LoadCommand(environment));
         interpreter.register(new HelpCommand(interpreter.getCommands()));
         interpreter.register(new ExitCommand(interpreter::stop));
         interpreter.register(new SaveCommand(environment));

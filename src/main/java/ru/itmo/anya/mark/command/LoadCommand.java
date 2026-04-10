@@ -5,6 +5,8 @@ import ru.itmo.anya.mark.interpreter.CommandArgsException;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
 
+import java.nio.file.Path;
+
 public final class LoadCommand extends BaseCommand {
 
     private String cachedPath;
@@ -20,7 +22,7 @@ public final class LoadCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "загрузить данные из CSV файлов";
+        return "загрузить данные из CSV; относительный путь — из папки data/";
     }
 
     @Override
@@ -39,7 +41,10 @@ public final class LoadCommand extends BaseCommand {
     public void execute(Environment environment, String[] args) throws CommandException {
         try {
             env.getService().loadFromCsv(cachedPath);
-            System.out.println("OK loaded from " + cachedPath);
+            Path base = env.getService().resolveCsvDataPath(cachedPath, true);
+            Path seriesFile = env.getService().getCsvSeriesPathFromStem(base);
+            Path stepsFile = env.getService().getCsvStepPathFromStem(base);
+            System.out.println("OK loaded: " + seriesFile + ", " + stepsFile);
         } catch (Exception e) {
             throw new CommandException(e.getMessage(), e);
         }

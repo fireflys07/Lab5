@@ -53,7 +53,6 @@ public final class DilutionStep implements Serializable {
         this.createdAt = createdAt;
     }
 
-
     public DilutionStep(long id, Instant createdAt) {
         this.id = id;
         this.createdAt = createdAt;

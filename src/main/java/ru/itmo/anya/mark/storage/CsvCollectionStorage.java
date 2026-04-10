@@ -15,6 +15,7 @@ public class CsvCollectionStorage<T> extends AbstractFileStorage<T> {
 
     public CsvCollectionStorage(Class<T> clazz) {
         this.csvMapper = new CsvMapper();
+        this.csvMapper.registerModule(new JavaTimeModule());
         this.clazz = clazz;
         this.csvMapper.registerModule(new JavaTimeModule());
     }

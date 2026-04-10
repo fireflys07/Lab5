@@ -39,7 +39,7 @@ public final class DilStepAddCommand extends BaseCommand {
 
     @Override
     public void readAdditionalInput(Environment env) throws CommandException {
-        // Читаем и валидируем номер шага с повторной попыткой
+
         int stepNumber;
         while (true) {
             System.out.print("Шаг номер: ");
@@ -55,7 +55,7 @@ public final class DilStepAddCommand extends BaseCommand {
             }
         }
 
-        // Читаем и валидируем коэффициент с повторной попыткой
+
         double factor;
         while (true) {
             System.out.print("Коэффициент (например 10): ");
@@ -71,7 +71,7 @@ public final class DilStepAddCommand extends BaseCommand {
             }
         }
 
-        // Читаем и валидируем итоговый объём с повторной попыткой
+
         double finalQty;
         while (true) {
             System.out.print("Итоговый объём: ");

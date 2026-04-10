@@ -5,6 +5,8 @@ import ru.itmo.anya.mark.interpreter.CommandArgsException;
 import ru.itmo.anya.mark.interpreter.CommandException;
 import ru.itmo.anya.mark.interpreter.Environment;
 
+import java.nio.file.Path;
+
 public final class SaveCommand extends BaseCommand {
 
     private String cachedPath;
@@ -20,7 +22,7 @@ public final class SaveCommand extends BaseCommand {
 
     @Override
     public String getHelp() {
-        return "сохранить данные в CSV файлы";
+        return "сохранить данные в CSV; относительный путь — файлы в папке data/";
     }
 
     @Override
@@ -39,7 +41,10 @@ public final class SaveCommand extends BaseCommand {
     public void execute(Environment environment, String[] args) throws CommandException {
         try {
             env.getService().saveToCsv(cachedPath);
-            System.out.println("OK saved to " + cachedPath);
+            Path base = env.getService().resolveCsvDataPath(cachedPath, false);
+            Path seriesFile = env.getService().getCsvSeriesPathFromStem(base);
+            Path stepsFile = env.getService().getCsvStepPathFromStem(base);
+            System.out.println("OK saved: " + seriesFile + ", " + stepsFile);
         } catch (Exception e) {
             throw new CommandException("ошибка сохранения: " + e.getMessage(), e);
         }
