@@ -134,7 +134,7 @@ public class DilutionFxApp extends Application {
             return new Image(userGif.toUri().toString(), 160, 160, true, true, true);
         }
 
-        // Исправлено: передаем ByteArrayInputStream напрямую
+        // передаем ByteArrayInputStream напрямую
         byte[] tiny = Base64.getDecoder().decode(TINY_GIF_B64);
         return new Image(new ByteArrayInputStream(tiny), 160, 160, true, true);
     }
