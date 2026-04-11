@@ -47,7 +47,7 @@ import java.util.List;
 
 public class DilutionFxApp extends Application {
 
-    private static final String TINY_GIF_B64 = "R0lGODdhAQABAPAAAAAAAAAAACH5BAEAAAEALAAAAAABAAEAAAICTAEAOw==";
+    private static final String TINY_GIF_B64 = "R==";
 
     private static final String CARD_NORMAL =
             "-fx-border-color: #b9b9b9; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;";
