@@ -23,6 +23,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import ru.itmo.anya.mark.model.DilutionSeries;
 import ru.itmo.anya.mark.model.DilutionSourceType;
@@ -32,12 +34,23 @@ import ru.itmo.anya.mark.service.DilutionService;
 import ru.itmo.anya.mark.service.DilutionStepManager;
 import ru.itmo.anya.mark.service.SeriesCollectionManager;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+
 /**
  * JavaFX UI: карточки серий, ручной Refresh из файла-источника, операции через {@link DilutionService}.
  */
 public class DilutionFxApp extends Application {
+    /** Минимальный прозрачный GIF (1×1), если нет своего файла. */
+    private static final String TINY_GIF_B64 = "R0lGODdhAQABAPAAAAAAAAAAACH5BAEAAAEALAAAAAABAAEAAAICTAEAOw==";
+
     private static final String CARD_NORMAL =
             "-fx-border-color: #b9b9b9; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;";
     private static final String CARD_SELECTED =
@@ -55,6 +68,8 @@ public class DilutionFxApp extends Application {
 
     private String lastDataPath;
     private VBox selectedCard;
+    private BorderPane rootPane;
+    private VBox funnyGifPanel;
 
     @Override
     public void start(Stage stage) {
@@ -62,6 +77,8 @@ public class DilutionFxApp extends Application {
 
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(12));
+        this.rootPane = root;
+        this.funnyGifPanel = buildFunnyGifPanel();
 
         VBox top = new VBox(8, buildToolbar(), buildActionsRow(), buildHintRow(), buildStatusRow());
         root.setTop(top);
@@ -71,10 +88,57 @@ public class DilutionFxApp extends Application {
         scrollPane.setFitToWidth(true);
         root.setCenter(scrollPane);
 
+        root.setRight(funnyGifPanel);
+
         renderCards();
 
         stage.setScene(new Scene(root, 1000, 700));
         stage.show();
+    }
+
+    private VBox buildFunnyGifPanel() {
+        ImageView gifView = new ImageView(loadFunnyGifImage());
+        gifView.setPreserveRatio(true);
+        gifView.setFitWidth(160);
+        gifView.setFitHeight(160);
+
+        Label caption = new Label("Смешнявка");
+        caption.setStyle("-fx-font-weight: bold;");
+
+        Label hint = new Label(
+                "Своя гифка:\n"
+                        + "thanks, for using our app\n"
+                        + "made with love by mazzyha and anutaf");
+        hint.setWrapText(true);
+        hint.setStyle("-fx-font-size: 11; -fx-text-fill: #555;");
+
+        Button hideBtn = new Button("Скрыть панель");
+        hideBtn.setOnAction(e -> rootPane.setRight(null));
+
+        VBox box = new VBox(8, caption, gifView, hint, hideBtn);
+        box.setPadding(new Insets(0, 0, 0, 12));
+        box.setMaxWidth(200);
+        return box;
+    }
+
+    private Image loadFunnyGifImage() {
+        // Исправлено: передаем InputStream напрямую и используем конструктор с 5 аргументами
+        try (InputStream in = DilutionFxApp.class.getResourceAsStream("/funny.gif")) {
+            if (in != null) {
+                return new Image(in, 160, 160, true, true);
+            }
+        } catch (IOException ignored) {
+        }
+
+        Path userGif = Paths.get(System.getProperty("user.home"), ".lab5-funny.gif");
+        if (Files.isRegularFile(userGif)) {
+            // Здесь передаем String (URL), поэтому аргументов может быть 6
+            return new Image(userGif.toUri().toString(), 160, 160, true, true, true);
+        }
+
+        // Исправлено: передаем ByteArrayInputStream напрямую
+        byte[] tiny = Base64.getDecoder().decode(TINY_GIF_B64);
+        return new Image(new ByteArrayInputStream(tiny), 160, 160, true, true);
     }
 
     private HBox buildHintRow() {
@@ -132,9 +196,12 @@ public class DilutionFxApp extends Application {
             }, true);
         });
 
+        Button showGifButton = new Button("Показать GIF");
+        showGifButton.setOnAction(e -> rootPane.setRight(funnyGifPanel));
+
         HBox row = new HBox(8,
                 new Label("Data path:"), dataPathField,
-                loadButton, saveButton, refreshButton);
+                loadButton, saveButton, refreshButton, showGifButton);
         row.setPadding(new Insets(4, 0, 0, 0));
         return row;
     }
