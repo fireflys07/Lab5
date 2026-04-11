@@ -44,11 +44,9 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * JavaFX UI: карточки серий, ручной Refresh из файла-источника, операции через {@link DilutionService}.
- */
+
 public class DilutionFxApp extends Application {
-    /** Минимальный прозрачный GIF (1×1), если нет своего файла. */
+
     private static final String TINY_GIF_B64 = "R0lGODdhAQABAPAAAAAAAAAAACH5BAEAAAEALAAAAAABAAEAAAICTAEAOw==";
 
     private static final String CARD_NORMAL =
@@ -122,7 +120,7 @@ public class DilutionFxApp extends Application {
     }
 
     private Image loadFunnyGifImage() {
-        // Исправлено: передаем InputStream напрямую и используем конструктор с 5 аргументами
+        // передаем InputStream напрямую и используем конструктор с 5 аргументами
         try (InputStream in = DilutionFxApp.class.getResourceAsStream("/funny.gif")) {
             if (in != null) {
                 return new Image(in, 160, 160, true, true);
@@ -132,7 +130,7 @@ public class DilutionFxApp extends Application {
 
         Path userGif = Paths.get(System.getProperty("user.home"), ".lab5-funny.gif");
         if (Files.isRegularFile(userGif)) {
-            // Здесь передаем String (URL), поэтому аргументов может быть 6
+
             return new Image(userGif.toUri().toString(), 160, 160, true, true, true);
         }
 

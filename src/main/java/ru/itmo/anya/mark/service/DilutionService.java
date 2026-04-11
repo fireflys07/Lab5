@@ -21,10 +21,7 @@ import java.util.stream.Stream;
 
 public class DilutionService {
 
-    /**
-     * Относительные пути для save/load складываются сюда (от текущей рабочей директории JVM),
-     * чтобы не засорять корень проекта. Абсолютные пути не меняются.
-     */
+
     private static final String RELATIVE_DATA_ROOT = "data";
 
     private final SeriesCollectionManager seriesManager;
