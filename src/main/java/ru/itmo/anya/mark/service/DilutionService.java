@@ -30,14 +30,30 @@ public class DilutionService {
     private final CollectionStorage<DilutionSeries> seriesStorage;
     private final CollectionStorage<DilutionStep> stepStorage;
 
-    public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager) {
+    private final AuthService authService;
+
+    public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager, AuthService authService) {
         this.seriesManager = seriesManager;
         this.stepManager = stepManager;
+
+        this.authService = authService;
 
         this.seriesStorage = new CsvCollectionStorage<>(DilutionSeries.class);
         this.stepStorage = new CsvCollectionStorage<>(DilutionStep.class);
         FileValidator fileValidator = new FileValidator();
     }
+
+    private void checkWriteAccess(String ownerUsername) {
+        if (!authService.isAuthenticated()) {
+            throw new SecurityException("Требуется авторизация для этой операции");
+        }
+        String current = authService.getCurrentUser();
+        if (!current.equals(ownerUsername)) {
+            throw new SecurityException(
+                    "Нет прав: объект принадлежит пользователю " + ownerUsername);
+        }
+    }
+
     // 7) dil_calc – возвращает список концентраций по шагам
     public List<Double> calculateConcentrations(long seriesId, double startConc) {
         // Получаем серию
@@ -144,6 +160,9 @@ public class DilutionService {
 
     // 1) dil_series_create – только валидация
     public DilutionSeries createSeries(String name, DilutionSourceType sourceType, long sourceId, String ownerUsername) {
+        if (!authService.isAuthenticated()) {
+            throw new SecurityException("Требуется авторизация для создания серии");
+        }
         if (name == null || name.trim().isEmpty() || name.length() > 128) {
             throw new IllegalArgumentException("name: пустое или слишком длинное");
         }

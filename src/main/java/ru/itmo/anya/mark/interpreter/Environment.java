@@ -1,9 +1,6 @@
 package ru.itmo.anya.mark.interpreter;
 
-import ru.itmo.anya.mark.service.CommandLineInterface;
-import ru.itmo.anya.mark.service.DilutionService;
-import ru.itmo.anya.mark.service.DilutionStepManager;
-import ru.itmo.anya.mark.service.SeriesCollectionManager;
+import ru.itmo.anya.mark.service.*;
 
 import java.util.Scanner;
 
@@ -13,17 +10,20 @@ public class Environment {
     private final DilutionService dilutionService;
     private final CommandLineInterface commandLineInterface;
     private final Scanner scanner;
+    private final AuthService authService;
 
     public Environment(SeriesCollectionManager seriesCollectionManager,
                        DilutionStepManager dilutionStepManager,
                        DilutionService dilutionService,
                        CommandLineInterface commandLineInterface,
-                       Scanner scanner) {
+                       Scanner scanner,
+                       AuthService authService) {
         this.seriesCollectionManager = seriesCollectionManager;
         this.dilutionStepManager = dilutionStepManager;
         this.dilutionService = dilutionService;
         this.commandLineInterface = commandLineInterface;
         this.scanner = scanner;
+        this.authService = authService;
     }
 
     public Scanner getScanner() {return scanner;}
@@ -40,4 +40,5 @@ public class Environment {
     public CommandLineInterface getCommandLineInterface() {
         return commandLineInterface;
     }
+    public AuthService getAuthService() { return authService; }
 }

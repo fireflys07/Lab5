@@ -43,6 +43,11 @@ import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import javafx.scene.control.PasswordField;
+import ru.itmo.anya.mark.model.User;
+import ru.itmo.anya.mark.storage.CsvUserStorage;
+import ru.itmo.anya.mark.service.AuthService;
+import java.nio.file.Paths;
 
 
 public class DilutionFxApp extends Application {
@@ -55,9 +60,15 @@ public class DilutionFxApp extends Application {
             "-fx-border-color: #2a6fdb; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8; "
                     + "-fx-background-color: #f0f6ff; -fx-cursor: hand;";
 
+    private String currentUsername;
+    private final Path usersFile = Paths.get("users.csv");
+    private final CsvUserStorage userStorage = new CsvUserStorage();
+    private AuthService authService;
+    private Label userStatusLabel;
+
     private final SeriesCollectionManager seriesManager = new SeriesCollectionManager();
     private final DilutionStepManager stepManager = new DilutionStepManager();
-    private final DilutionService service = new DilutionService(seriesManager, stepManager);
+    private final DilutionService service = new DilutionService(seriesManager, stepManager, authService);
 
     private final VBox cardsBox = new VBox(10);
     private final ProgressBar progressBar = new ProgressBar();
@@ -71,6 +82,13 @@ public class DilutionFxApp extends Application {
 
     @Override
     public void start(Stage stage) {
+        try {
+            userStorage.load(usersFile);
+        } catch (Exception e) {
+            // Файл не существует
+        }
+        authService = new AuthService(userStorage, usersFile);
+
         stage.setTitle("Dilution Manager (JavaFX)");
 
         BorderPane root = new BorderPane();
@@ -197,10 +215,41 @@ public class DilutionFxApp extends Application {
         Button showGifButton = new Button("Показать GIF");
         showGifButton.setOnAction(e -> rootPane.setRight(funnyGifPanel));
 
+        Button registerButton = new Button("Register");
+        registerButton.setOnAction(e -> showRegisterDialog());
+
+        Button authButton = new Button("Login");
+        authButton.setOnAction(e -> {
+            if (currentUsername == null) {
+                showLoginDialog();
+            } else {
+                currentUsername = null;
+                statusLabel.setText("Выход выполнен");
+                authButton.setText("Login");
+                updateAuthUI();
+            }
+        });
+
+        userStatusLabel = new Label("Гость");
+        userStatusLabel.setStyle("-fx-font-weight: bold;");
+
         HBox row = new HBox(8,
-                new Label("Data path:"), dataPathField,
-                loadButton, saveButton, refreshButton, showGifButton);
+                new Label("Data path:"),
+                dataPathField,
+                loadButton,
+                saveButton,
+                refreshButton,
+                showGifButton,
+                new Region(),  // Разделитель (растягивается)
+                new Label("Пользователь:"),
+                userStatusLabel,
+                registerButton,
+                authButton
+        );
+
+        HBox.setHgrow(row.getChildren().get(6), Priority.ALWAYS);  // Разделитель растёт
         row.setPadding(new Insets(4, 0, 0, 0));
+
         return row;
     }
 
@@ -217,12 +266,16 @@ public class DilutionFxApp extends Application {
 
         Button createSeriesButton = new Button("Создать серию");
         createSeriesButton.setOnAction(e -> runInBackground("create-series", () -> {
+            if (!authService.isAuthenticated()) {
+                throw new SecurityException("Требуется авторизация для создания серии");
+            }
             String name = nameField.getText().trim();
             long sourceId = Long.parseLong(sourceIdField.getText().trim());
-            service.createSeries(name, sourceTypeBox.getValue(), sourceId, "UI_USER");
+            String owner = authService.getCurrentUser();
+            service.createSeries(name, sourceTypeBox.getValue(), sourceId, currentUsername);
             Platform.runLater(() -> {
                 nameField.clear();
-                statusLabel.setText("Серия добавлена в память. Сохраните (Save) и обновите список (Refresh).");
+                statusLabel.setText("Серия добавлена. Владелец: " + owner);
             });
         }, false));
 
@@ -502,6 +555,134 @@ public class DilutionFxApp extends Application {
         alert.setHeaderText("Операция не выполнена");
         alert.setContentText(message == null ? "Неизвестная ошибка" : message);
         alert.showAndWait();
+    }
+
+    /** Диалог регистрации */
+    private void showRegisterDialog() {
+        TextField loginField = new TextField();
+        loginField.setPromptText("Логин (мин. 3 символа)");
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Пароль (мин. 4 символа)");
+
+        PasswordField confirmField = new PasswordField();
+        confirmField.setPromptText("Подтвердите пароль");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.add(new Label("Логин:"), 0, 0);
+        grid.add(loginField, 1, 0);
+        grid.add(new Label("Пароль:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+        grid.add(new Label("Повтор:"), 0, 2);
+        grid.add(confirmField, 1, 2);
+
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.setTitle("Регистрация");
+        alert.setHeaderText("Создание нового аккаунта");
+        alert.getDialogPane().setContent(grid);
+
+        ButtonType registerBtn = new ButtonType("Зарегистрировать", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(registerBtn, cancelBtn);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == registerBtn) {
+                String login = loginField.getText().trim();
+                String password = passwordField.getText();
+                String confirm = confirmField.getText();
+
+                if (login.length() < 3) {
+                    showError("Логин должен содержать минимум 3 символа");
+                    return;
+                }
+                if (password.length() < 4) {
+                    showError("Пароль должен содержать минимум 4 символа");
+                    return;
+                }
+                if (!password.equals(confirm)) {
+                    showError("Пароли не совпадают");
+                    return;
+                }
+
+                try {
+                    if (userStorage.findByLogin(login).isPresent()) {
+                        showError("Пользователь уже существует");
+                        return;
+                    }
+
+                    User newUser = new User(login, password);
+                    if (userStorage.addUser(newUser)) {
+                        userStorage.save(userStorage.load(usersFile), usersFile);
+                        authService.reloadUsers(usersFile);
+                        statusLabel.setText("Регистрация успешна: " + login);
+                        authService.login(login, password);
+                        currentUsername = login;
+                        updateAuthUI();
+                    }
+                } catch (Exception e) {
+                    showError("Ошибка: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /** Диалог входа */
+    private void showLoginDialog() {
+        TextField loginField = new TextField();
+        loginField.setPromptText("Логин");
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Пароль");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.add(new Label("Логин:"), 0, 0);
+        grid.add(loginField, 1, 0);
+        grid.add(new Label("Пароль:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.setTitle("Вход");
+        alert.setHeaderText("Введите данные для входа");
+        alert.getDialogPane().setContent(grid);
+
+        ButtonType loginBtn = new ButtonType("Войти", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(loginBtn, cancelBtn);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == loginBtn) {
+                String login = loginField.getText().trim();
+                String password = passwordField.getText();
+
+                if (login.isEmpty()) {
+                    showError("Введите логин");
+                    return;
+                }
+
+                var userOpt = userStorage.findByLogin(login);
+                if (userOpt.filter(user -> user.checkPassword(password)).isPresent()) {
+                    authService.login(login, password);
+                    currentUsername = login;
+                    statusLabel.setText("Вход выполнен: " + login);
+                    updateAuthUI();
+                } else {
+                    showError("Неверный логин или пароль");
+                }
+            }
+        });
+    }
+
+    /** Обновление UI авторизации */
+    private void updateAuthUI() {
+        if (userStatusLabel != null) {
+            userStatusLabel.setText(currentUsername != null ? currentUsername : "Гость");
+        }
     }
 
     @FunctionalInterface

@@ -31,12 +31,14 @@ public final class CommandLineInterface {
         }
 
         this.scanner = scanner;
+        AuthService authService = null;
         this.env = new Environment(
                 seriesCollectionManager,
                 dilutionStepManager,
                 dilutionService,
                 this,
-                scanner
+                scanner,
+                authService
         );
 
         registerCommands();

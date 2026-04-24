@@ -25,21 +25,21 @@
             <version>2.15.2</version>
         </dependency>
 
-        <!-- Jackson Databind для ObjectMapper (основная библиотека) -->
+        <!-- Jackson Databind -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.15.2</version>
         </dependency>
 
-        <!-- Jackson JSR310 для поддержки Java 8 Date/Time API (LocalDateTime и др.) -->
+        <!-- Jackson JSR310 для LocalDateTime -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.15.2</version>
         </dependency>
 
-        <!-- JavaFX Controls для графического интерфейса -->
+        <!-- JavaFX Controls -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -60,7 +60,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Плагин для запуска JavaFX-приложений -->
+            <!-- Плагин JavaFX -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -72,5 +72,21 @@
                     </options>
                 </configuration>
             </plugin>
+
+            <!-- Плагин для создания исполняемого JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>ru.itmo.anya.mark.ui.DilutionFxApp</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+</project>
