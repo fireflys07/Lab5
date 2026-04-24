@@ -377,10 +377,6 @@ public class DilutionFxApp extends Application {
             Label hint = new Label("Клик — выбор · двойной клик — подробности");
             hint.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
 
-            Button editButton = new Button("Изменить");
-            editButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
-            editButton.setOnAction(e -> openEditDialog(s));
-
             Button deleteButton = new Button("Удалить");
             deleteButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
             deleteButton.setOnAction(e -> confirmDeleteSeries(s));
@@ -388,17 +384,14 @@ public class DilutionFxApp extends Application {
             // Проверяем права: кнопки активны только если текущий пользователь — владелец
             String currentUser = currentUsername;  // или authService.getCurrentUser()
             boolean isOwner = currentUser != null && currentUser.equals(s.getOwnerUsername());
-            editButton.setDisable(!isOwner);
             deleteButton.setDisable(!isOwner);
 
             if (!isOwner) {
-                editButton.setStyle("-fx-background-color: #cccccc; -fx-text-fill: #666666; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
                 deleteButton.setStyle("-fx-background-color: #cccccc; -fx-text-fill: #666666; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
-                editButton.setTooltip(new Tooltip("Нет прав на изменение"));
                 deleteButton.setTooltip(new Tooltip("Нет прав на удаление"));
             }
 
-            HBox buttonBox = new HBox(10, editButton, deleteButton);
+            HBox buttonBox = new HBox(10, deleteButton);
 
             card.getChildren().addAll(title, source, meta, hint, buttonBox);
 
@@ -424,10 +417,60 @@ public class DilutionFxApp extends Application {
         details.setWrapText(true);
         details.setPrefRowCount(12);
 
-        GridPane editGrid = new GridPane();
-        editGrid.setHgap(8);
-        editGrid.setVgap(8);
-        editGrid.setPadding(new Insets(8, 0, 0, 0));
+        VBox editBox = new VBox(10);  // Отступ 10px между строками
+        editBox.setPadding(new Insets(8, 0, 0, 0));
+
+        boolean isOwner = currentUsername != null && currentUsername.equals(fresh.getOwnerUsername());
+
+        Label nameLabel = new Label("Изменить название серии:");
+        TextField nameField = new TextField(fresh.getName());
+        nameField.setPromptText("Новое название");
+        nameField.setPrefWidth(200);
+        Button applyName = new Button("Применить");
+
+        if (!isOwner) {
+            nameField.setDisable(true);
+            applyName.setDisable(true);
+            applyName.setTooltip(new Tooltip("Нет прав на изменение"));
+        }
+
+        applyName.setOnAction(ev -> {
+            try {
+                String newName = nameField.getText().trim();
+                if (newName.isEmpty()) {
+                    showError("Название не может быть пустым");
+                    return;
+                }
+                if (newName.length() > 128) {
+                    showError("Название не может быть длиннее 128 символов");
+                    return;
+                }
+
+                runInBackground("update-series-name", () -> {
+                    // Обновляем серию
+                    service.updateSeries(fresh.getId(), newName, fresh.getSourceType(), fresh.getSourceId());
+
+                    // Автосохранение
+                    if (lastDataPath != null && !lastDataPath.isEmpty()) {
+                        service.saveToCsv(lastDataPath);
+                    }
+
+                    Platform.runLater(() -> {
+                        // Обновляем информацию в диалоге
+                        DilutionSeries updated = service.getSeries(fresh.getId());
+                        details.setText(buildSeriesDetailsTextFromService(updated));
+                        statusLabel.setText("Название серии обновлено");
+                        renderCards();  // Обновляем список карточек
+                    });
+                }, false);
+
+            } catch (Exception ex) {
+                showError("Ошибка: " + ex.getMessage());
+            }
+        });
+
+        HBox nameRow = new HBox(10, nameLabel, nameField, applyName);
+        editBox.getChildren().add(nameRow);
 
         Label linkLabel = new Label("Сменить источник (link):");
         ComboBox<DilutionSourceType> typeBox = new ComboBox<>();
@@ -435,6 +478,15 @@ public class DilutionFxApp extends Application {
         typeBox.setValue(fresh.getSourceType());
         TextField sourceIdField = new TextField(Long.toString(fresh.getSourceId()));
         Button applyLink = new Button("Применить");
+
+        if (!isOwner) {
+            typeBox.setDisable(true);
+            sourceIdField.setDisable(true);
+            applyLink.setDisable(true);
+            applyLink.setTooltip(new Tooltip("Нет прав на изменение"));
+        }
+
+
         applyLink.setOnAction(ev -> {
             try {
                 DilutionSourceType t = typeBox.getValue();
@@ -447,12 +499,11 @@ public class DilutionFxApp extends Application {
                 showError(ex.getMessage());
             }
         });
-        editGrid.add(linkLabel, 0, 0);
-        editGrid.add(typeBox, 1, 0);
-        editGrid.add(sourceIdField, 2, 0);
-        editGrid.add(applyLink, 3, 0);
 
-        Label stepEditLabel = new Label("Редактирование шага по ID:");
+        HBox linkRow = new HBox(10, linkLabel, typeBox, sourceIdField, applyLink);
+        editBox.getChildren().add(linkRow);
+
+        Label stepLabel = new Label("Редактирование шага по ID:");
         TextField stepIdField = new TextField();
         stepIdField.setPromptText("step id");
         stepIdField.setPrefWidth(120);
@@ -460,18 +511,38 @@ public class DilutionFxApp extends Application {
         factorField.setPromptText("factor");
         factorField.setPrefWidth(80);
         Button applyFactor = new Button("Обновить factor");
+
+        if (!isOwner) {
+            stepIdField.setDisable(true);
+            factorField.setDisable(true);
+            applyFactor.setDisable(true);
+            applyFactor.setTooltip(new Tooltip("Нет прав на изменение"));
+        }
+
         applyFactor.setOnAction(ev -> applyStepFactor(stepIdField, factorField, fresh.getId(), details));
         TextField qtyField = new TextField();
         qtyField.setPromptText("final qty");
         qtyField.setPrefWidth(80);
         Button applyQty = new Button("Обновить объём");
+
+        if (!isOwner) {
+            qtyField.setDisable(true);
+            applyQty.setDisable(true);
+            applyQty.setTooltip(new Tooltip("Нет прав на изменение"));
+        }
+
         applyQty.setOnAction(ev -> applyStepQty(stepIdField, qtyField, fresh.getId(), details));
 
-        editGrid.add(stepEditLabel, 0, 1);
-        HBox stepRow = new HBox(8, stepIdField, factorField, applyFactor, qtyField, applyQty);
-        editGrid.add(stepRow, 1, 1, 3, 1);
+        HBox stepRow = new HBox(10, stepLabel, stepIdField, factorField, applyFactor, qtyField, applyQty);
+        editBox.getChildren().add(stepRow);
 
-        VBox content = new VBox(8, new Label("Подробная информация:"), details, editGrid);
+        if (!isOwner) {
+            Label noAccessLabel = new Label("У вас нет прав на редактирование этой серии");
+            noAccessLabel.setStyle("-fx-text-fill: #f44336; -fx-font-weight: bold;");
+            editBox.getChildren().add(noAccessLabel);
+        }
+
+        VBox content = new VBox(8, new Label("Подробная информация:"), details, editBox);
         pane.setContent(content);
 
         ButtonType close = new ButtonType("Закрыть", ButtonBar.ButtonData.CANCEL_CLOSE);
