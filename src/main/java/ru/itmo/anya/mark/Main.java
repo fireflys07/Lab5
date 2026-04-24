@@ -70,5 +70,7 @@ public class Main {
         interpreter.register(new LoadCommand(environment));
         interpreter.register(new RegisterCommand(environment));
         interpreter.register(new LoginCommand(environment));
+        interpreter.register(new DilSeriesDeleteCommand(environment));
+        interpreter.register(new DilSeriesUpdateCommand(environment));
     }
 }

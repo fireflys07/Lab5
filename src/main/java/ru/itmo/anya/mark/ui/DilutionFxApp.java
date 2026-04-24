@@ -6,17 +6,7 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -44,7 +34,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
-import javafx.scene.control.PasswordField;
+
 import ru.itmo.anya.mark.model.User;
 import ru.itmo.anya.mark.storage.CsvUserStorage;
 import ru.itmo.anya.mark.service.AuthService;
@@ -225,10 +215,12 @@ public class DilutionFxApp extends Application {
             if (currentUsername == null) {
                 showLoginDialog();
             } else {
+                authService.logout();
                 currentUsername = null;
                 statusLabel.setText("Выход выполнен");
                 authButton.setText("Login");
                 updateAuthUI();
+                renderCards();
             }
         });
 
@@ -268,17 +260,32 @@ public class DilutionFxApp extends Application {
 
         Button createSeriesButton = new Button("Создать серию");
         createSeriesButton.setOnAction(e -> runInBackground("create-series", () -> {
-            if (!authService.isAuthenticated()) {
-                throw new SecurityException("Требуется авторизация для создания серии");
+            try {
+                if (currentUsername == null) {
+                    throw new SecurityException("Требуется авторизация для создания серии");
+                }
+
+                String name = nameField.getText().trim();
+                long sourceId = Long.parseLong(sourceIdField.getText().trim());
+
+                service.createSeries(name, sourceTypeBox.getValue(), sourceId, currentUsername);
+
+                // ← АВТОМАТИЧЕСКИ СОХРАНЯЕМ В ФАЙЛ
+                if (lastDataPath != null && !lastDataPath.isEmpty()) {
+                    service.saveToCsv(lastDataPath);
+                }
+
+                Platform.runLater(() -> {
+                    nameField.clear();
+                    statusLabel.setText("Серия добавлена и сохранена. Владелец: " + currentUsername);
+                    renderCards();
+                });
+
+            } catch (Exception ex) {
+                System.out.println("EXCEPTION in createSeries: " + ex.getMessage());
+                ex.printStackTrace();
+                throw ex;
             }
-            String name = nameField.getText().trim();
-            long sourceId = Long.parseLong(sourceIdField.getText().trim());
-            String owner = authService.getCurrentUser();
-            service.createSeries(name, sourceTypeBox.getValue(), sourceId, currentUsername);
-            Platform.runLater(() -> {
-                nameField.clear();
-                statusLabel.setText("Серия добавлена. Владелец: " + owner);
-            });
         }, false));
 
         TextField stepSeriesIdField = new TextField();
@@ -370,7 +377,30 @@ public class DilutionFxApp extends Application {
             Label hint = new Label("Клик — выбор · двойной клик — подробности");
             hint.setStyle("-fx-font-size: 11; -fx-text-fill: #666;");
 
-            card.getChildren().addAll(title, source, meta, hint);
+            Button editButton = new Button("Изменить");
+            editButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
+            editButton.setOnAction(e -> openEditDialog(s));
+
+            Button deleteButton = new Button("Удалить");
+            deleteButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
+            deleteButton.setOnAction(e -> confirmDeleteSeries(s));
+
+            // Проверяем права: кнопки активны только если текущий пользователь — владелец
+            String currentUser = currentUsername;  // или authService.getCurrentUser()
+            boolean isOwner = currentUser != null && currentUser.equals(s.getOwnerUsername());
+            editButton.setDisable(!isOwner);
+            deleteButton.setDisable(!isOwner);
+
+            if (!isOwner) {
+                editButton.setStyle("-fx-background-color: #cccccc; -fx-text-fill: #666666; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
+                deleteButton.setStyle("-fx-background-color: #cccccc; -fx-text-fill: #666666; -fx-padding: 5 15; -fx-border-radius: 5; -fx-background-radius: 5;");
+                editButton.setTooltip(new Tooltip("Нет прав на изменение"));
+                deleteButton.setTooltip(new Tooltip("Нет прав на удаление"));
+            }
+
+            HBox buttonBox = new HBox(10, editButton, deleteButton);
+
+            card.getChildren().addAll(title, source, meta, hint, buttonBox);
 
             card.setOnMouseClicked(ev -> {
                 selectCard(card);
@@ -644,6 +674,7 @@ public class DilutionFxApp extends Application {
                     authService.login(login, password);
                     currentUsername = login;
                     updateAuthUI();
+                    renderCards();
                 } else {
                     showError("Пользователь уже существует");
                 }
@@ -682,19 +713,22 @@ public class DilutionFxApp extends Application {
                 String login = loginField.getText().trim();
                 String password = passwordField.getText();
 
-                if (login.isEmpty()) {
-                    showError("Введите логин");
-                    return;
-                }
+                try {
+                    userStorage.load(usersFile);
 
-                var userOpt = userStorage.findByLogin(login);
-                if (userOpt.filter(user -> user.checkPassword(password)).isPresent()) {
-                    authService.login(login, password);
-                    currentUsername = login;
-                    statusLabel.setText("Вход выполнен: " + login);
-                    updateAuthUI();
-                } else {
-                    showError("Неверный логин или пароль");
+                    var userOpt = userStorage.findByLogin(login);
+                    if (userOpt.filter(user -> user.checkPassword(password)).isPresent()) {
+                        authService.login(login, password);
+
+                        currentUsername = login;
+                        statusLabel.setText("Вход выполнен: " + login);
+                        updateAuthUI();
+                        renderCards();
+                    } else {
+                        showError("Неверный логин или пароль");
+                    }
+                } catch (Exception e) {
+                    showError("Ошибка при входе: " + e.getMessage());
                 }
             }
         });
@@ -705,6 +739,100 @@ public class DilutionFxApp extends Application {
         if (userStatusLabel != null) {
             userStatusLabel.setText(currentUsername != null ? currentUsername : "Гость");
         }
+    }
+
+    /** Подтверждение удаления серии */
+    private void confirmDeleteSeries(DilutionSeries series) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Подтверждение удаления");
+        alert.setHeaderText("Удаление серии #" + series.getId());
+        alert.setContentText("Вы уверены, что хотите удалить серию \"" + series.getName() + "\"?\nЭто действие нельзя отменить.");
+
+        ButtonType deleteBtn = new ButtonType("Удалить", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(deleteBtn, cancelBtn);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == deleteBtn) {
+                runInBackground("delete-series", () -> {
+                    service.deleteSeries(series.getId());
+
+                    if (lastDataPath != null && !lastDataPath.isEmpty()) {
+                        service.saveToCsv(lastDataPath);
+                    }
+
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Серия #" + series.getId() + " удалена");
+                        renderCards();  // Обновляем список
+                    });
+                }, true);
+            }
+        });
+    }
+
+    /** Диалог редактирования серии */
+    private void openEditDialog(DilutionSeries series) {
+        DialogPane pane = new DialogPane();
+        pane.setHeaderText("Редактирование серии #" + series.getId());
+
+        // Поля для редактирования
+        TextField nameField = new TextField(series.getName());
+        nameField.setPromptText("Название серии");
+
+        ComboBox<DilutionSourceType> sourceTypeBox = new ComboBox<>();
+        sourceTypeBox.getItems().addAll(DilutionSourceType.values());
+        sourceTypeBox.setValue(series.getSourceType());
+
+        TextField sourceIdField = new TextField(Long.toString(series.getSourceId()));
+        sourceIdField.setPromptText("ID источника");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.add(new Label("Название:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Тип источника:"), 0, 1);
+        grid.add(sourceTypeBox, 1, 1);
+        grid.add(new Label("ID источника:"), 0, 2);
+        grid.add(sourceIdField, 1, 2);
+
+        pane.setContent(grid);
+
+        ButtonType saveBtn = new ButtonType("Сохранить", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+        pane.getButtonTypes().setAll(saveBtn, cancelBtn);
+
+        Alert alert = new Alert(Alert.AlertType.NONE);
+        alert.setDialogPane(pane);
+        alert.setTitle("Редактирование серии");
+        alert.initOwner(cardsBox.getScene() == null ? null : cardsBox.getScene().getWindow());
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == saveBtn) {
+                try {
+                    String newName = nameField.getText().trim();
+                    DilutionSourceType newType = sourceTypeBox.getValue();
+                    long newSourceId = Long.parseLong(sourceIdField.getText().trim());
+
+                    runInBackground("update-series", () -> {
+                        service.updateSeries(series.getId(), newName, newType, newSourceId);
+
+                        if (lastDataPath != null && !lastDataPath.isEmpty()) {
+                            service.saveToCsv(lastDataPath);
+                        }
+
+                        Platform.runLater(() -> {
+                            statusLabel.setText("Серия #" + series.getId() + " обновлена");
+                            renderCards();  // Обновляем список
+                        });
+                    }, true);
+
+                } catch (Exception e) {
+                    showError("Ошибка при обновлении: " + e.getMessage());
+                }
+            }
+        });
     }
 
     @FunctionalInterface

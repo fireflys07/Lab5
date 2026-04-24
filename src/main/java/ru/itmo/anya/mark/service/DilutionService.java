@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DilutionService {
@@ -256,6 +257,58 @@ public class DilutionService {
         s.setSourceId(sourceId);
     }
 
+    public void deleteSeries(long id) {
+        DilutionSeries series = seriesManager.getById(id);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия не найдена");
+        }
+
+        // Проверка прав
+        checkOwnership(series.getOwnerUsername());
+
+        seriesManager.remove(id);
+
+        // Удаляем связанные шаги
+        var steps = stepManager.getAll().stream()
+                .filter(s -> s.getSeriesId() == id)
+                .collect(Collectors.toList());
+        for (var step : steps) {
+            stepManager.remove(step.getId());
+        }
+    }
+
+    public void updateSeries(long id, String newName, DilutionSourceType newType,
+                             long newSourceId) {
+        DilutionSeries series = seriesManager.getById(id);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия не найдена");
+        }
+
+        // Проверка прав
+        checkOwnership(series.getOwnerUsername());
+
+        // Обновление
+        series.setName(newName);
+        series.setSourceType(newType);
+        series.setSourceId(newSourceId);
+        series.setUpdatedAt(Instant.now());
+    }
+
+    // Метод проверки прав (должен быть в DilutionService)
+    private void checkOwnership(String ownerUsername) {
+        if (!authService.isAuthenticated()) {
+            throw new SecurityException("Требуется авторизация");
+        }
+
+        String currentUser = authService.getCurrentUser();
+        if (!currentUser.equals(ownerUsername)) {
+            throw new SecurityException(
+                    "Ошибка: у вас нет прав на изменение этого объекта. " +
+                            "Владелец: " + ownerUsername
+            );
+        }
+    }
+
     private static Path resolveCsvBasePath(String basePath) {
         Path p = Path.of(basePath.trim());
         if (p.isAbsolute()) {
@@ -277,14 +330,6 @@ public class DilutionService {
         return parent == null ? Path.of(stem + "_step.csv") : parent.resolve(stem + "_step.csv");
     }
 
-    /**
-     * Приводит ввод к «базе» пары файлов: {@code stem} → {@code stem_series.csv} и {@code stem_step.csv}
-     * в одной папке с {@code stem}.
-     * <ul>
-     *   <li>Путь, оканчивающийся на {@code *_series.csv} или {@code *_step.csv}, трактуется как один из файлов пары.</li>
-     *   <li>Если указан существующий каталог и {@code scanDirectory}, ищется единственная пара внутри него.</li>
-     * </ul>
-     */
     private static Path resolveCsvPairBase(String basePath, boolean scanDirectory) throws Exception {
         Path p = resolveCsvBasePath(basePath);
         Path fileName = p.getFileName();
