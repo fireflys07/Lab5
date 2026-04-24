@@ -40,6 +40,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -68,7 +69,7 @@ public class DilutionFxApp extends Application {
 
     private final SeriesCollectionManager seriesManager = new SeriesCollectionManager();
     private final DilutionStepManager stepManager = new DilutionStepManager();
-    private final DilutionService service = new DilutionService(seriesManager, stepManager, authService);
+    private DilutionService service;
 
     private final VBox cardsBox = new VBox(10);
     private final ProgressBar progressBar = new ProgressBar();
@@ -88,6 +89,7 @@ public class DilutionFxApp extends Application {
             // Файл не существует
         }
         authService = new AuthService(userStorage, usersFile);
+        service = new DilutionService(seriesManager, stepManager, authService);
 
         stage.setTitle("Dilution Manager (JavaFX)");
 
@@ -607,23 +609,43 @@ public class DilutionFxApp extends Application {
                     return;
                 }
 
-                try {
-                    if (userStorage.findByLogin(login).isPresent()) {
-                        showError("Пользователь уже существует");
+                if (authService.register(login, password)) {
+                    try {
+                        // Создаём нового пользователя
+                        User newUser = new User(login, password);
+
+                        // Загружаем существующих из файла
+                        List<User> usersToSave = new ArrayList<>();
+                        for (User u : userStorage.load(usersFile)) {
+                            usersToSave.add(u);
+                        }
+
+                        // Добавляем нового, если ещё нет
+                        boolean exists = false;
+                        for (User u : usersToSave) {
+                            if (u.getLogin().equals(login)) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            usersToSave.add(newUser);
+                        }
+
+                        // Сохраняем полный список в файл
+                        userStorage.save(usersToSave, usersFile);
+
+                    } catch (Exception e) {
+                        showError("Ошибка сохранения: " + e.getMessage());
                         return;
                     }
 
-                    User newUser = new User(login, password);
-                    if (userStorage.addUser(newUser)) {
-                        userStorage.save(userStorage.load(usersFile), usersFile);
-                        authService.reloadUsers(usersFile);
-                        statusLabel.setText("Регистрация успешна: " + login);
-                        authService.login(login, password);
-                        currentUsername = login;
-                        updateAuthUI();
-                    }
-                } catch (Exception e) {
-                    showError("Ошибка: " + e.getMessage());
+                    statusLabel.setText("Регистрация успешна: " + login);
+                    authService.login(login, password);
+                    currentUsername = login;
+                    updateAuthUI();
+                } else {
+                    showError("Пользователь уже существует");
                 }
             }
         });
