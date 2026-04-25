@@ -15,7 +15,6 @@ public class AuthService {
         try {
             userStorage.load(usersFilePath);
         } catch (Exception e) {
-            // Файл не существует или пустой — это нормально
         }
     }
 
