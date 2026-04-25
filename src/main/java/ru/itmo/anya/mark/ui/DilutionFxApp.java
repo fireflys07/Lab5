@@ -309,15 +309,48 @@ public class DilutionFxApp extends Application {
         unitBox.setValue(FinalQuantityUnit.ML);
 
         Button addStepButton = new Button("Добавить шаг");
-        addStepButton.setOnAction(e -> runInBackground("add-step", () -> {
-            long seriesId = Long.parseLong(stepSeriesIdField.getText().trim());
-            int stepNum = Integer.parseInt(stepNumField.getText().trim());
-            double factor = Double.parseDouble(factorField.getText().trim());
-            double finalQty = Double.parseDouble(finalQtyField.getText().trim());
-            service.addStep(seriesId, stepNum, factor, finalQty, unitBox.getValue());
-            Platform.runLater(() -> statusLabel.setText(
-                    "Шаг добавлен в память. Сохраните (Save) и обновите список (Refresh)."));
-        }, false));
+        addStepButton.setOnAction(e -> {
+            if (currentUsername == null) {
+                showError("Требуется авторизация. Пожалуйста, войдите в систему.");
+                return;
+            }
+
+            runInBackground("add-step", () -> {
+                try {
+                    long seriesId = Long.parseLong(stepSeriesIdField.getText().trim());
+                    int stepNum = Integer.parseInt(stepNumField.getText().trim());
+                    double factor = Double.parseDouble(factorField.getText().trim());
+                    double finalQty = Double.parseDouble(finalQtyField.getText().trim());
+
+                    DilutionSeries series = service.getSeries(seriesId);
+                    if (series == null) {
+                        throw new IllegalArgumentException("Серия не найдена");
+                    }
+
+                    String currentUser = currentUsername;  // или authService.getCurrentUser()
+                    if (currentUser == null || !currentUser.equals(series.getOwnerUsername())) {
+                        throw new SecurityException(
+                                "Ошибка: у вас нет прав на добавление шагов к этой серии. " +
+                                        "Владелец: " + series.getOwnerUsername()
+                        );
+                    }
+
+                    service.addStep(seriesId, stepNum, factor, finalQty, unitBox.getValue());
+
+                    if (lastDataPath != null && !lastDataPath.isEmpty()) {
+                        service.saveToCsv(lastDataPath);
+                    }
+
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Шаг добавлен и сохранён");
+                        renderCards();  // Обновляем список
+                    });
+
+                } catch (Exception ex) {
+                    throw ex;
+                }
+            }, false);
+        });
 
         HBox row = new HBox(8,
                 new Label("Серия:"), nameField, sourceTypeBox, sourceIdField, createSeriesButton,
