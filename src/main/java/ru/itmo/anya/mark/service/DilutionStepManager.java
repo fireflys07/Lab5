@@ -2,22 +2,37 @@ package ru.itmo.anya.mark.service;
 
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
-
+import ru.itmo.anya.mark.storage.StepRepository;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class DilutionStepManager {
-
     private final Map<Long, DilutionStep> storage = new LinkedHashMap<>();
+    private final StepRepository repository;
 
-    public void add(DilutionStep step) {
-        if (step == null) {
-            throw new IllegalArgumentException("Ошибка: нельзя добавить пустой шаг разбавления");
+    public DilutionStepManager(StepRepository repository) {
+        this.repository = repository;
+    }
+
+    // Загрузка из БД при старте
+    public void loadFromDatabase() {
+        storage.clear();
+        List<DilutionStep> allFromDb = repository.findAll();
+        for (DilutionStep s : allFromDb) {
+            storage.put(s.getId(), s);
         }
+        System.out.println("Шаги загружены из БД: " + storage.size());
+    }
 
-        long id = step.getId();
-        storage.put(id, step);
-        System.out.println("Шаг разбавления успешно добавлен с ID: " + id);
+    public DilutionStep add(DilutionStep step) {
+        if (step == null) throw new IllegalArgumentException("Пустой шаг");
+
+        long generatedId = repository.save(step);
+        if (generatedId == -1) throw new RuntimeException("Ошибка сохранения шага");
+
+        DilutionStep savedStep = repository.getById(generatedId);
+        storage.put(savedStep.getId(), savedStep);
+        return savedStep;
     }
 
     public DilutionStep getById(long id) {
@@ -30,68 +45,28 @@ public class DilutionStepManager {
                 .collect(Collectors.toList());
     }
 
-    public Collection<DilutionStep> getAll() {
-        return storage.values();
-    }
-
-    public void update(long id,
-                       long seriesId,
-                       int stepNumber,
-                       double factor,
-                       double finalQuantity,
-                       FinalQuantityUnit finalUnit) {
-        if (!storage.containsKey(id)) {
-            System.err.println("Ошибка: шаг с ID " + id + " не найден");
-            return;
-        }
-
-        DilutionStep stepToUpdate = storage.get(id);
-        try {
-            stepToUpdate.setSeriesId(seriesId);
-            stepToUpdate.setStepNumber(stepNumber);
-            stepToUpdate.setFactor(factor);
-            stepToUpdate.setFinalQuantity(finalQuantity);
-            stepToUpdate.setFinalUnit(finalUnit);
-
-            System.out.println("Шаг с ID " + id + " успешно обновлён");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Ошибка валидации при обновлении шага: " + e.getMessage());
-        }
+    public void update(long id, DilutionStep newData) {
+        if (!storage.containsKey(id)) return;
+        DilutionStep existing = storage.get(id);
+        existing.setStepNumber(newData.getStepNumber());
+        existing.setFactor(newData.getFactor());
+        existing.setFinalQuantity(newData.getFinalQuantity());
+        existing.setFinalUnit(newData.getFinalUnit());
+        repository.save(existing);
     }
 
     public void remove(long id) {
-        if (storage.remove(id) != null) {
-            System.out.println("Шаг с ID " + id + " удалён");
-        } else {
-            System.err.println("Ошибка: ID " + id + " не существует");
-        }
+        storage.remove(id);
+        repository.delete(id);
     }
 
-    public long getStepsNextID() {
-        return System.currentTimeMillis() + storage.size();
+    public Collection<DilutionStep> getAll() {
+        return storage.values();
     }
 
     public List<DilutionStep> getSteps() {
         return new ArrayList<>(storage.values());
     }
 
-    public void addAndSave(DilutionStep step) {
-        add(step);
-        System.out.println(" Шаг добавлен ");
-    }
-
-    //Очистить все шаги из хранилища.
-    public void clear() {
-        storage.clear();
-    }
-
-    //Добавить несколько шагов сразу.
-    public void addAll(Collection<DilutionStep> stepsList) {
-        for (DilutionStep step : stepsList) {
-            if (step != null && !storage.containsKey(step.getId())) {
-                storage.put(step.getId(), step);
-            }
-        }
-    }
+    public void clear() { storage.clear(); }
 }
-

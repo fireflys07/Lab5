@@ -1,27 +1,47 @@
 package ru.itmo.anya.mark.service;
 
 import ru.itmo.anya.mark.model.DilutionSeries;
-
+import ru.itmo.anya.mark.storage.SeriesRepository;
 import java.util.*;
 
 public class SeriesCollectionManager {
     private final Map<Long, DilutionSeries> storage = new LinkedHashMap<>();
+    private final SeriesRepository repository; // Используем репозиторий
 
-    public void add(DilutionSeries series) {
-        if (series == null) {
-            throw new IllegalArgumentException("Ошибка: нельзя добавить пустую серию разбавлений");
+    public SeriesCollectionManager(SeriesRepository repository) {
+        this.repository = repository;
+    }
+
+    // Метод загрузки из БД в память (вызывается при старте)
+    public void loadFromDatabase() {
+        storage.clear();
+        List<DilutionSeries> allFromDb = repository.findAll();
+        for (DilutionSeries s : allFromDb) {
+            storage.put(s.getId(), s);
+        }
+        System.out.println("Серии загружены из БД: " + storage.size());
+    }
+
+    public DilutionSeries add(DilutionSeries series) {
+        if (series == null) throw new IllegalArgumentException("Ошибка: пустая серия");
+
+        // Сохраняем в БД и получаем сгенерированный ID
+        long generatedId = repository.save(series);
+
+        if (generatedId == -1) {
+            throw new RuntimeException("Не удалось сохранить серию в БД");
         }
 
-        if (storage.containsKey(series.getId())) {
-            throw new IllegalArgumentException("Серия с ID " + series.getId() + " уже существует");
-        }
+        // Создаем новый объект с настоящим ID из БД (т.к. id в модели final)
+        // Но чтобы не усложнять, мы просто обновим объект в мапе, если ID совпал,
+        // или положим новый.
+        // В данном случае repository.save уже вернул ID, нам нужно обновить объект в памяти.
+        // Проще всего перезапросить из БД или обновить текущий.
 
-        if (series.getOwnerUsername() == null || series.getOwnerUsername().trim().isEmpty()) {
-            series.setOwnerUsername("SYSTEM");
-        }
+        DilutionSeries savedSeries = repository.getById(generatedId);
+        storage.put(savedSeries.getId(), savedSeries);
 
-        storage.put(series.getId(), series);
-        System.out.println("Серия разбавлений успешно добавлена с ID: " + series.getId());
+        return savedSeries;
     }
 
     public DilutionSeries getById(long id) {
@@ -33,52 +53,28 @@ public class SeriesCollectionManager {
     }
 
     public void update(long id, DilutionSeries newData) {
-        // Проверяем, существует ли серия
-        if (!storage.containsKey(id)) {
-            System.err.println("Ошибка: серия с ID " + id + " не найдена");
-            return;
-        }
+        if (!storage.containsKey(id)) return;
 
-        DilutionSeries seriesToUpdate = storage.get(id);
-        try {
-            seriesToUpdate.setName(newData.getName());
-            seriesToUpdate.setSourceType(newData.getSourceType());
-            seriesToUpdate.setSourceId(newData.getSourceId());
-            seriesToUpdate.setOwnerUsername(newData.getOwnerUsername());
+        DilutionSeries existing = storage.get(id);
+        existing.setName(newData.getName());
+        existing.setSourceType(newData.getSourceType());
+        existing.setSourceId(newData.getSourceId());
+        // owner менять нельзя обычно, но если нужно: existing.setOwnerUsername(...)
+        existing.setUpdatedAt(java.time.Instant.now());
 
-            System.out.println("Серия с ID " + id + " успешно обновлена");
-        } catch (IllegalArgumentException e) {
-            System.err.println("Ошибка валидации при обновлении: " + e.getMessage());
-        }
+        repository.save(existing); // Сохраняем изменения в БД
     }
 
     public void remove(long id) {
-        if (storage.remove(id) != null) {
-            System.out.println("Серия с ID " + id + " удалена");
-        } else {
-            System.err.println("Ошибка: ID " + id + " не существует");
-        }
-    }
-
-    public long getSeriesNextID() {
-        return System.currentTimeMillis() + storage.size();
+        storage.remove(id);
+        repository.delete(id); // Удаляем из БД (каскадно удалит и шаги)
     }
 
     public List<DilutionSeries> getSeries() {
         return new ArrayList<>(storage.values());
     }
 
-    //Очистить все серии из хранилища.
     public void clear() {
         storage.clear();
-    }
-
-    //Добавить несколько серий сразу.
-    public void addAll(Collection<DilutionSeries> seriesList) {
-        for (DilutionSeries series : seriesList) {
-            if (series != null && !storage.containsKey(series.getId())) {
-                storage.put(series.getId(), series);
-            }
-        }
     }
 }

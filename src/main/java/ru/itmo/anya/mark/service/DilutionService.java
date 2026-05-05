@@ -1,49 +1,30 @@
 package ru.itmo.anya.mark.service;
 
-
 import ru.itmo.anya.mark.model.DilutionSeries;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
-import ru.itmo.anya.mark.storage.CollectionStorage;
-import ru.itmo.anya.mark.storage.CsvCollectionStorage;
-import ru.itmo.anya.mark.storage.FileValidator;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DilutionService {
 
-
-    private static final String RELATIVE_DATA_ROOT = "data";
-
     private final SeriesCollectionManager seriesManager;
     private final DilutionStepManager stepManager;
-
-    private final CollectionStorage<DilutionSeries> seriesStorage;
-    private final CollectionStorage<DilutionStep> stepStorage;
-
     private final AuthService authService;
 
-    public DilutionService(SeriesCollectionManager seriesManager, DilutionStepManager stepManager, AuthService authService) {
+    public DilutionService(SeriesCollectionManager seriesManager,
+                           DilutionStepManager stepManager,
+                           AuthService authService) {
         this.seriesManager = seriesManager;
         this.stepManager = stepManager;
-
         this.authService = authService;
-
-        this.seriesStorage = new CsvCollectionStorage<>(DilutionSeries.class);
-        this.stepStorage = new CsvCollectionStorage<>(DilutionStep.class);
-        FileValidator fileValidator = new FileValidator();
     }
 
+    // Проверка прав на запись
     private void checkWriteAccess(String ownerUsername) {
         if (!authService.isAuthenticated()) {
             throw new SecurityException("Требуется авторизация для этой операции");
@@ -55,112 +36,23 @@ public class DilutionService {
         }
     }
 
-    // 7) dil_calc – возвращает список концентраций по шагам
-    public List<Double> calculateConcentrations(long seriesId, double startConc) {
-        // Получаем серию
-        DilutionSeries series = seriesManager.getById(seriesId);
-        if (series == null) {
-            throw new IllegalArgumentException("Series not found: " + seriesId);
+    // Проверка прав на владение
+    private void checkOwnership(String ownerUsername) {
+        if (!authService.isAuthenticated()) {
+            throw new SecurityException("Требуется авторизация");
         }
-
-        // Получаем шаги серии
-        List<DilutionStep> steps = stepManager.getStepsBySeriesId(seriesId);
-        if (steps.isEmpty()) {
-            throw new IllegalArgumentException("Series has no dilution steps");
+        String currentUser = authService.getCurrentUser();
+        if (!currentUser.equals(ownerUsername)) {
+            throw new SecurityException(
+                    "Ошибка: у вас нет прав на изменение этого объекта. " +
+                            "Владелец: " + ownerUsername);
         }
-
-        // Сортируем шаги по номеру
-        steps.sort((s1, s2) -> Integer.compare(s1.getStepNumber(), s2.getStepNumber()));
-
-        // Рассчитываем концентрации
-        List<Double> results = new ArrayList<>();
-        double currentConc = startConc;
-
-        for (DilutionStep step : steps) {
-            currentConc = currentConc / step.getFactor();
-            results.add(currentConc);
-        }
-
-        return results;
-    }
-    // 8) dil_step_update
-    public void updateStepFactor(long stepId, double factor) {
-        if (factor <= 0) {
-            throw new IllegalArgumentException("Factor must be positive");
-        }
-
-        DilutionStep step = stepManager.getById(stepId);
-        if (step == null) {
-            throw new IllegalArgumentException("Step not found: " + stepId);
-        }
-
-        step.setFactor(factor);
     }
 
-    public void updateStepFinalQuantity(long stepId, double quantity) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
-        }
+    // ==================== SERIES OPERATIONS ====================
 
-        DilutionStep step = stepManager.getById(stepId);
-        if (step == null) {
-            throw new IllegalArgumentException("Step not found: " + stepId);
-        }
-
-        step.setFinalQuantity(quantity);
-    }
-    // 9) dil_step_delete
-    public DilutionStep getStepById(long stepId) {
-        return stepManager.getById(stepId);
-    }
-
-    public void deleteStep(long stepId) {
-        DilutionStep step = stepManager.getById(stepId);
-        if (step == null) {
-            throw new IllegalArgumentException("Step not found: " + stepId);
-        }
-
-        stepManager.remove(stepId);
-        System.out.println("Шаг с ID " + stepId + " удалён из хранилища");
-    }
-
-    // 10) dil_export
-    public String exportSeries(long seriesId) {
-        DilutionSeries series = seriesManager.getById(seriesId);
-        if (series == null) {
-            throw new IllegalArgumentException("Серия с ID " + seriesId + " не найдена");
-        }
-
-        List<DilutionStep> steps = stepManager.getStepsBySeriesId(seriesId);
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== Dilution Series #").append(seriesId).append(" ===\n");
-        sb.append("Name: ").append(series.getName()).append("\n");
-        sb.append("Owner: ").append(series.getOwnerUsername()).append("\n");
-
-        if (series.getSourceType() != null) {
-            sb.append("Source: ").append(series.getSourceType())
-                    .append(" #").append(series.getSourceId()).append("\n");
-        }
-
-        sb.append("\nSteps:\n");
-        sb.append(String.format("%-6s %-6s %-8s %-10s %s\n",
-                "ID", "Step", "Factor", "Quantity", "Unit"));
-
-        for (DilutionStep step : steps) {
-            sb.append(String.format("%-6d %-6d %-8.2f %-10.2f %s\n",
-                    step.getId(),
-                    step.getStepNumber(),
-                    step.getFactor(),
-                    step.getFinalQuantity(),
-                    step.getFinalUnit()));
-        }
-
-        return sb.toString();
-    }
-
-    // 1) dil_series_create – только валидация
-    public DilutionSeries createSeries(String name, DilutionSourceType sourceType, long sourceId, String ownerUsername) {
+    public DilutionSeries createSeries(String name, DilutionSourceType sourceType,
+                                       long sourceId, String ownerUsername) {
         if (!authService.isAuthenticated()) {
             throw new SecurityException("Требуется авторизация для создания серии");
         }
@@ -177,23 +69,19 @@ public class DilutionService {
             ownerUsername = "SYSTEM";
         }
 
-        long id = seriesManager.getSeriesNextID();
-        DilutionSeries series = new DilutionSeries(id, Instant.now());
+        DilutionSeries series = new DilutionSeries(0, Instant.now());
         series.setName(name);
         series.setSourceType(sourceType);
         series.setSourceId(sourceId);
         series.setOwnerUsername(ownerUsername);
 
-        seriesManager.add(series);
-        return series;
+        return seriesManager.add(series);
     }
 
-    // 2) dil_series_list
     public List<DilutionSeries> listSeries() {
         return new ArrayList<>(seriesManager.getSeries());
     }
 
-    // 3) dil_series_show
     public DilutionSeries getSeries(long seriesId) {
         DilutionSeries s = seriesManager.getById(seriesId);
         if (s == null) {
@@ -202,69 +90,31 @@ public class DilutionService {
         return s;
     }
 
-    // 4) dil_step_add
-    public DilutionStep addStep(long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit unit) {
-        DilutionSeries series = seriesManager.getById(seriesId);
+    public void deleteSeries(long id) {
+        DilutionSeries series = seriesManager.getById(id);
         if (series == null) {
             throw new IllegalArgumentException("Серия не найдена");
         }
-
-        if (!authService.isAuthenticated()) {
-            throw new SecurityException(
-                    "Требуется авторизация для добавления шагов. " +
-                            "Пожалуйста, зарегистрируйтесь или войдите в систему."
-            );
-        }
-
-        String currentUser = authService.getCurrentUser();
-        if (!currentUser.equals(series.getOwnerUsername())) {
-            throw new SecurityException(
-                    "Ошибка: у вас нет прав на добавление шагов к этой серии. " +
-                            "Владелец: " + series.getOwnerUsername()
-            );
-        }
-
-        if (stepNumber <= 0) {
-            throw new IllegalArgumentException("stepNumber: должен быть > 0");
-        }
-        if (factor <= 0) {
-            throw new IllegalArgumentException("factor: должен быть > 0");
-        }
-        if (finalQuantity <= 0) {
-            throw new IllegalArgumentException("finalQuantity: должен быть > 0");
-        }
-        if (unit == null) {
-            throw new IllegalArgumentException("не может быть: null");
-        }
-
-        boolean exists = stepManager.getAll().stream()
-                .anyMatch(s -> s.getSeriesId() == seriesId && s.getStepNumber() == stepNumber);
-        if (exists) {
-            throw new IllegalArgumentException("Шаг с таким номером уже существует");
-        }
-
-        long stepId = stepManager.getStepsNextID();
-        DilutionStep step = new DilutionStep(stepId, seriesId, stepNumber, factor, finalQuantity, unit, Instant.now());
-        stepManager.add(step);
-        return step;
+        checkOwnership(series.getOwnerUsername());
+        seriesManager.remove(id);
+        // Шаги удалятся каскадно через БД (ON DELETE CASCADE)
     }
 
-    // 5) dil_step_list
-    public List<DilutionStep> listSteps(long seriesId) {
-        if (seriesManager.getById(seriesId) == null) {
-            throw new IllegalArgumentException("series: не найден");
+    public void updateSeries(long id, String newName, DilutionSourceType newType, long newSourceId) {
+        DilutionSeries series = seriesManager.getById(id);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия не найдена");
         }
-        List<DilutionStep> result = new ArrayList<>();
-        for (DilutionStep st : stepManager.getSteps()) {
-            if (st.getSeriesId() == seriesId) {
-                result.add(st);
-            }
-        }
+        checkOwnership(series.getOwnerUsername());
 
-        return result;
+        series.setName(newName);
+        series.setSourceType(newType);
+        series.setSourceId(newSourceId);
+        series.setUpdatedAt(Instant.now());
+
+        seriesManager.update(id, series);
     }
 
-    // 6) dil_link_set
     public void linkSource(long seriesId, DilutionSourceType type, long sourceId) {
         DilutionSeries s = seriesManager.getById(seriesId);
         if (s == null) {
@@ -276,210 +126,164 @@ public class DilutionService {
         if (sourceId <= 0) {
             throw new IllegalArgumentException("sourceId: должен быть > 0");
         }
+        checkOwnership(s.getOwnerUsername());
+
         s.setSourceType(type);
         s.setSourceId(sourceId);
+        s.setUpdatedAt(Instant.now());
+        seriesManager.update(seriesId, s);
     }
 
-    public void deleteSeries(long id) {
-        DilutionSeries series = seriesManager.getById(id);
+    // ==================== STEP OPERATIONS ====================
+
+    public DilutionStep addStep(long seriesId, int stepNumber, double factor,
+                                double finalQuantity, FinalQuantityUnit unit) {
+        DilutionSeries series = seriesManager.getById(seriesId);
         if (series == null) {
             throw new IllegalArgumentException("Серия не найдена");
         }
-
-        // Проверка прав
-        checkOwnership(series.getOwnerUsername());
-
-        seriesManager.remove(id);
-
-        // Удаляем связанные шаги
-        var steps = stepManager.getAll().stream()
-                .filter(s -> s.getSeriesId() == id)
-                .collect(Collectors.toList());
-        for (var step : steps) {
-            stepManager.remove(step.getId());
-        }
-    }
-
-    public void updateSeries(long id, String newName, DilutionSourceType newType,
-                             long newSourceId) {
-        DilutionSeries series = seriesManager.getById(id);
-        if (series == null) {
-            throw new IllegalArgumentException("Серия не найдена");
-        }
-
-        // Проверка прав
-        checkOwnership(series.getOwnerUsername());
-
-        // Обновление
-        series.setName(newName);
-        series.setSourceType(newType);
-        series.setSourceId(newSourceId);
-        series.setUpdatedAt(Instant.now());
-    }
-
-    // Метод проверки прав
-    private void checkOwnership(String ownerUsername) {
         if (!authService.isAuthenticated()) {
-            throw new SecurityException("Требуется авторизация");
+            throw new SecurityException("Требуется авторизация для добавления шагов");
         }
-
         String currentUser = authService.getCurrentUser();
-        if (!currentUser.equals(ownerUsername)) {
+        if (!currentUser.equals(series.getOwnerUsername())) {
             throw new SecurityException(
-                    "Ошибка: у вас нет прав на изменение этого объекта. " +
-                            "Владелец: " + ownerUsername
-            );
+                    "Нет прав: владелец серии — " + series.getOwnerUsername());
         }
+        if (stepNumber <= 0) {
+            throw new IllegalArgumentException("stepNumber: должен быть > 0");
+        }
+        if (factor <= 0) {
+            throw new IllegalArgumentException("factor: должен быть > 0");
+        }
+        if (finalQuantity <= 0) {
+            throw new IllegalArgumentException("finalQuantity: должен быть > 0");
+        }
+        if (unit == null) {
+            throw new IllegalArgumentException("unit: не может быть null");
+        }
+
+        // Проверка на дубликат шага
+        boolean exists = stepManager.getStepsBySeriesId(seriesId).stream()
+                .anyMatch(s -> s.getStepNumber() == stepNumber);
+        if (exists) {
+            throw new IllegalArgumentException("Шаг с таким номером уже существует");
+        }
+
+        DilutionStep step = new DilutionStep(0, seriesId, stepNumber, factor,
+                finalQuantity, unit, Instant.now());
+        return stepManager.add(step);
     }
 
-    private static Path resolveCsvBasePath(String basePath) {
-        Path p = Path.of(basePath.trim());
-        if (p.isAbsolute()) {
-            return p.toAbsolutePath().normalize();
+    public List<DilutionStep> listSteps(long seriesId) {
+        if (seriesManager.getById(seriesId) == null) {
+            throw new IllegalArgumentException("series: не найден");
         }
-        return Path.of(RELATIVE_DATA_ROOT).resolve(p).normalize();
+        return stepManager.getStepsBySeriesId(seriesId).stream()
+                .sorted(Comparator.comparingInt(DilutionStep::getStepNumber))
+                .toList();
     }
 
-    /** База — путь .../stem (без суффикса); файлы в той же папке: stem_series.csv и stem_step.csv. */
-    private static Path csvSeriesFileNextToStem(Path stemBase) {
-        Path parent = stemBase.getParent();
-        String stem = stemBase.getFileName().toString();
-        return parent == null ? Path.of(stem + "_series.csv") : parent.resolve(stem + "_series.csv");
+    public DilutionStep getStepById(long stepId) {
+        return stepManager.getById(stepId);
     }
 
-    private static Path csvStepFileNextToStem(Path stemBase) {
-        Path parent = stemBase.getParent();
-        String stem = stemBase.getFileName().toString();
-        return parent == null ? Path.of(stem + "_step.csv") : parent.resolve(stem + "_step.csv");
+    public void deleteStep(long stepId) {
+        DilutionStep step = stepManager.getById(stepId);
+        if (step == null) {
+            throw new IllegalArgumentException("Step not found: " + stepId);
+        }
+        // Проверка прав через серию
+        DilutionSeries series = seriesManager.getById(step.getSeriesId());
+        if (series != null) {
+            checkOwnership(series.getOwnerUsername());
+        }
+        stepManager.remove(stepId);
     }
 
-    private static Path resolveCsvPairBase(String basePath, boolean scanDirectory) throws Exception {
-        Path p = resolveCsvBasePath(basePath);
-        Path fileName = p.getFileName();
-        if (fileName != null) {
-            String name = fileName.toString();
-            String lc = name.toLowerCase(Locale.ROOT);
-            if (lc.endsWith("_series.csv")) {
-                String stem = name.substring(0, name.length() - "_series.csv".length());
-                Path parent = p.getParent();
-                return parent != null ? parent.resolve(stem) : Path.of(stem);
-            }
-            if (lc.endsWith("_step.csv")) {
-                String stem = name.substring(0, name.length() - "_step.csv".length());
-                Path parent = p.getParent();
-                return parent != null ? parent.resolve(stem) : Path.of(stem);
-            }
+    public void updateStepFactor(long stepId, double factor) {
+        if (factor <= 0) {
+            throw new IllegalArgumentException("Factor must be positive");
         }
-        if (scanDirectory && Files.exists(p) && Files.isDirectory(p)) {
-            try {
-                return findSingleCsvPairBaseInDirectory(p);
-            } catch (Exception first) {
-                Path dataDir = p.resolve(RELATIVE_DATA_ROOT);
-                if (Files.isDirectory(dataDir)) {
-                    return findSingleCsvPairBaseInDirectory(dataDir);
-                }
-                throw first;
-            }
+        DilutionStep step = stepManager.getById(stepId);
+        if (step == null) {
+            throw new IllegalArgumentException("Step not found: " + stepId);
         }
-        if (!scanDirectory && Files.exists(p) && Files.isDirectory(p)) {
-            throw new Exception("для save укажите базовое имя (например mydata), а не каталог");
+        // Проверка прав
+        DilutionSeries series = seriesManager.getById(step.getSeriesId());
+        if (series != null) {
+            checkOwnership(series.getOwnerUsername());
         }
-        return p;
+        step.setFactor(factor);
+        stepManager.update(stepId, step);
     }
 
-    private static Path findSingleCsvPairBaseInDirectory(Path dir) throws Exception {
-        List<Path> bases = new ArrayList<>();
-        try (Stream<Path> stream = Files.list(dir)) {
-            for (Path seriesFile : stream.toList()) {
-                if (!Files.isRegularFile(seriesFile)) {
-                    continue;
-                }
-                Path onlyName = seriesFile.getFileName();
-                if (onlyName == null) {
-                    continue;
-                }
-                String name = onlyName.toString();
-                String lower = name.toLowerCase(Locale.ROOT);
-                if (!lower.endsWith("_series.csv")) {
-                    continue;
-                }
-                String stem = name.substring(0, name.length() - "_series.csv".length());
-                Path stepFile = dir.resolve(stem + "_step.csv");
-                if (Files.exists(stepFile) && Files.isRegularFile(stepFile)) {
-                    bases.add(dir.resolve(stem));
-                }
-            }
+    public void updateStepFinalQuantity(long stepId, double quantity) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
         }
-        if (bases.isEmpty()) {
-            throw new Exception("В каталоге нет пары файлов *_series.csv и *_step.csv: " + dir);
+        DilutionStep step = stepManager.getById(stepId);
+        if (step == null) {
+            throw new IllegalArgumentException("Step not found: " + stepId);
         }
-        if (bases.size() > 1) {
-            throw new Exception("В каталоге несколько пар CSV — укажите базовое имя или путь к одному из файлов");
+        // Проверка прав
+        DilutionSeries series = seriesManager.getById(step.getSeriesId());
+        if (series != null) {
+            checkOwnership(series.getOwnerUsername());
         }
-        return bases.get(0);
+        step.setFinalQuantity(quantity);
+        stepManager.update(stepId, step);
     }
 
-    /**
-     * Базовый путь пары файлов (для сообщений в UI).
-     * {@code scanDirectory} — как в {@link #loadFromCsv}: искать единственную пару в каталоге.
-     */
-    public Path resolveCsvDataPath(String basePath, boolean scanDirectory) throws Exception {
-        return resolveCsvPairBase(basePath, scanDirectory);
+    // ==================== CALCULATIONS & EXPORT ====================
+
+    public List<Double> calculateConcentrations(long seriesId, double startConc) {
+        DilutionSeries series = seriesManager.getById(seriesId);
+        if (series == null) {
+            throw new IllegalArgumentException("Series not found: " + seriesId);
+        }
+        List<DilutionStep> steps = stepManager.getStepsBySeriesId(seriesId);
+        if (steps.isEmpty()) {
+            throw new IllegalArgumentException("Series has no dilution steps");
+        }
+        steps.sort(Comparator.comparingInt(DilutionStep::getStepNumber));
+
+        List<Double> results = new ArrayList<>();
+        double currentConc = startConc;
+        for (DilutionStep step : steps) {
+            currentConc = currentConc / step.getFactor();
+            results.add(currentConc);
+        }
+        return results;
+    }
+    public void loadFromDatabase() {
+        seriesManager.loadFromDatabase();
+        stepManager.loadFromDatabase();
     }
 
-    /** Пути к CSV для уже вычисленной базы stem (как в {@link #resolveCsvDataPath}). */
-    public Path getCsvSeriesPathFromStem(Path stemBase) {
-        return csvSeriesFileNextToStem(stemBase);
-    }
-
-    public Path getCsvStepPathFromStem(Path stemBase) {
-        return csvStepFileNextToStem(stemBase);
-    }
-
-    public void saveToCsv(String basePath) throws Exception {
-        Path base = resolveCsvPairBase(basePath, false);
-        Path seriesPath = csvSeriesFileNextToStem(base);
-        Path stepsPath = csvStepFileNextToStem(base);
-
-        seriesStorage.save(seriesManager.getSeries(), seriesPath);
-        stepStorage.save(stepManager.getSteps(), stepsPath);
-    }
-
-    public void loadFromCsv(String basePath) throws Exception {
-        Path base = resolveCsvPairBase(basePath, true);
-        Path seriesPath = csvSeriesFileNextToStem(base);
-        Path stepsPath = csvStepFileNextToStem(base);
-
-        // Проверяем файлы
-        if (!Files.exists(seriesPath)) {
-            throw new Exception("Файл не найден: " + seriesPath);
+    public String exportSeries(long seriesId) {
+        DilutionSeries series = seriesManager.getById(seriesId);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия с ID " + seriesId + " не найдена");
         }
-        if (!Files.exists(stepsPath)) {
-            throw new Exception("Файл не найден: " + stepsPath);
+        List<DilutionStep> steps = listSteps(seriesId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Dilution Series #").append(seriesId).append(" ===\n");
+        sb.append("Name: ").append(series.getName()).append("\n");
+        sb.append("Owner: ").append(series.getOwnerUsername()).append("\n");
+        if (series.getSourceType() != null) {
+            sb.append("Source: ").append(series.getSourceType())
+                    .append(" #").append(series.getSourceId()).append("\n");
         }
-
-        // Загружаем
-        List<DilutionSeries> loadedSeries = seriesStorage.load(seriesPath);
-        List<DilutionStep> loadedSteps = stepStorage.load(stepsPath);
-
-        // Проверяем целостность
-        Set<Long> seriesIds = new HashSet<>();
-        for (DilutionSeries s : loadedSeries) {
-            seriesIds.add(s.getId());
+        sb.append("\nSteps:\n");
+        sb.append(String.format("%-6s %-6s %-8s %-10s %s\n",
+                "ID", "Step", "Factor", "Quantity", "Unit"));
+        for (DilutionStep step : steps) {
+            sb.append(String.format("%-6d %-6d %-8.2f %-10.2f %s\n",
+                    step.getId(), step.getStepNumber(), step.getFactor(),
+                    step.getFinalQuantity(), step.getFinalUnit()));
         }
-
-        for (DilutionStep step : loadedSteps) {
-            if (!seriesIds.contains(step.getSeriesId())) {
-                throw new Exception("Шаг id=" + step.getId() +
-                        " ссылается на несуществующую серию: seriesId=" + step.getSeriesId());
-            }
-        }
-
-        // Заменяем данные
-        seriesManager.clear();
-        stepManager.clear();
-
-        seriesManager.addAll(loadedSeries);
-        stepManager.addAll(loadedSteps);
+        return sb.toString();
     }
 }

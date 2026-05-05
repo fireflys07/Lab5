@@ -3,6 +3,7 @@ package ru.itmo.anya.mark.storage;
 import ru.itmo.anya.mark.model.DilutionSeries;
 import ru.itmo.anya.mark.model.DilutionSourceType;
 import java.sql.*;
+import java.time.Instant;
 import java.util.*;
 
 public class SeriesRepository {
@@ -18,9 +19,10 @@ public class SeriesRepository {
     }
 
     private long insert(DilutionSeries series) {
-        // INSERT с возвратом нового ID. owner_id берется подзапросом по логину.
-        String sql = "INSERT INTO dilution_series (name, source_type, source_id, owner_id, created_at, updated_at) " +
-                "VALUES (?, ?, ?, (SELECT id FROM users WHERE login = ?), ?, ?) RETURNING id";
+        // Не передаём created_at и updated_at - БД сама поставит DEFAULT
+        String sql = "INSERT INTO dilution_series (name, source_type, source_id, owner_id) " +
+                "VALUES (?, ?, ?, (SELECT id FROM users WHERE login = ?)) " +
+                "RETURNING id, created_at, updated_at";
 
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -28,12 +30,20 @@ public class SeriesRepository {
             stmt.setString(1, series.getName());
             stmt.setString(2, series.getSourceType().name());
             stmt.setLong(3, series.getSourceId());
-            stmt.setString(4, series.getOwnerUsername()); // Подставляем логин
-            stmt.setTimestamp(5, Timestamp.from(series.getCreatedAt()));
-            stmt.setTimestamp(6, Timestamp.from(series.getUpdatedAt()));
+            stmt.setString(4, series.getOwnerUsername());
 
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getLong("id");
+                if (rs.next()) {
+                    long id = rs.getLong("id");
+                    // Возвращаем объект с реальными датами из БД
+                    Timestamp createdAtTs = rs.getTimestamp("created_at");
+                    Timestamp updatedAtTs = rs.getTimestamp("updated_at");
+
+                    Instant createdAt = (createdAtTs != null) ? createdAtTs.toInstant() : Instant.now();
+                    Instant updatedAt = (updatedAtTs != null) ? updatedAtTs.toInstant() : createdAt;
+
+                    return id; // Просто возвращаем ID, а объект создастся при следующем чтении
+                }
             }
         } catch (SQLException e) {
             System.err.println("Ошибка создания серии: " + e.getMessage());
@@ -98,14 +108,49 @@ public class SeriesRepository {
     }
 
     private DilutionSeries mapRowToSeries(ResultSet rs) throws SQLException {
+        Timestamp createdAtTs = rs.getTimestamp("created_at");
+        Timestamp updatedAtTs = rs.getTimestamp("updated_at");
+
+        Instant createdAt = (createdAtTs != null) ? createdAtTs.toInstant() : Instant.now();
+        Instant updatedAt = (updatedAtTs != null) ? updatedAtTs.toInstant() : createdAt;
+
+        // Получаем username через JOIN (колонка "owner_username" из запроса)
+        String ownerUsername = rs.getString("owner_username");
+        if (ownerUsername == null) {
+            // Если JOIN не сработал, пробуем получить owner_id и сделать отдельный запрос
+            int ownerId = rs.getInt("owner_id");
+            if (!rs.wasNull()) {
+                ownerUsername = getUsernameById(ownerId);
+            } else {
+                ownerUsername = "SYSTEM";
+            }
+        }
+
         return new DilutionSeries(
                 rs.getLong("id"),
                 rs.getString("name"),
                 DilutionSourceType.valueOf(rs.getString("source_type")),
                 rs.getLong("source_id"),
-                rs.getString("owner_username"),
-                rs.getTimestamp("created_at").toInstant(),
-                rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toInstant() : rs.getTimestamp("created_at").toInstant()
+                ownerUsername,
+                createdAt,
+                updatedAt
         );
+    }
+
+    // Вспомогательный метод
+    private String getUsernameById(int userId) {
+        String sql = "SELECT login FROM users WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("login");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return "SYSTEM";
     }
 }

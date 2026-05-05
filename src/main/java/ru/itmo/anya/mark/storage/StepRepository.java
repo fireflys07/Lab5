@@ -3,6 +3,7 @@ package ru.itmo.anya.mark.storage;
 import ru.itmo.anya.mark.model.DilutionStep;
 import ru.itmo.anya.mark.model.FinalQuantityUnit;
 import java.sql.*;
+import java.time.Instant;
 import java.util.*;
 
 public class StepRepository {
@@ -17,7 +18,8 @@ public class StepRepository {
 
     private long insert(DilutionStep step) {
         String sql = "INSERT INTO dilution_steps (series_id, step_number, factor, final_quantity, final_unit, created_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
+                "VALUES (?, ?, ?, ?, ?::final_quantity_unit, ?) RETURNING id";
+
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -25,13 +27,15 @@ public class StepRepository {
             stmt.setInt(2, step.getStepNumber());
             stmt.setDouble(3, step.getFactor());
             stmt.setDouble(4, step.getFinalQuantity());
-            stmt.setString(5, step.getFinalUnit().name());
+            stmt.setString(5, step.getFinalUnit().name()); // "ML", "L", etc.
             stmt.setTimestamp(6, Timestamp.from(step.getCreatedAt()));
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) return rs.getLong("id");
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("Ошибка сохранения шага: " + e.getMessage());
+        }
         return -1;
     }
 
@@ -97,6 +101,9 @@ public class StepRepository {
     }
 
     private DilutionStep mapRowToStep(ResultSet rs) throws SQLException {
+        Timestamp createdAtTs = rs.getTimestamp("created_at");
+        Instant createdAt = (createdAtTs != null) ? createdAtTs.toInstant() : Instant.now();
+
         return new DilutionStep(
                 rs.getLong("id"),
                 rs.getLong("series_id"),
@@ -104,7 +111,7 @@ public class StepRepository {
                 rs.getDouble("factor"),
                 rs.getDouble("final_quantity"),
                 FinalQuantityUnit.valueOf(rs.getString("final_unit")),
-                rs.getTimestamp("created_at").toInstant()
+                createdAt
         );
     }
 }

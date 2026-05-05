@@ -4,38 +4,48 @@ import ru.itmo.anya.mark.command.*;
 import ru.itmo.anya.mark.interpreter.CommandInterpreter;
 import ru.itmo.anya.mark.interpreter.Environment;
 import ru.itmo.anya.mark.service.*;
-import ru.itmo.anya.mark.storage.CsvUserStorage;
-import ru.itmo.anya.mark.storage.UserStorage;
+import ru.itmo.anya.mark.storage.*;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 
 public class Main {
     public static void main(String[] args) {
-        SeriesCollectionManager seriesCollectionManager = new SeriesCollectionManager();
-        DilutionStepManager dilutionStepManager = new DilutionStepManager();
+        //  Инициализация подключения к БД
+        DatabaseConnection.getInstance().testConnection();
 
-        UserStorage userStorage = new CsvUserStorage();
-        Path usersFile = Paths.get("users.csv");
-        AuthService authService = new AuthService(userStorage, usersFile);
+        // Создаём репозитории
+        UserRepository userRepo = new UserRepository();
+        SeriesRepository seriesRepo = new SeriesRepository();
+        StepRepository stepRepo = new StepRepository();
 
-        DilutionService dilutionService = new DilutionService(seriesCollectionManager, dilutionStepManager, authService);
+        //  менеджеры с репозиториями
+        SeriesCollectionManager seriesManager = new SeriesCollectionManager(seriesRepo);
+        DilutionStepManager stepManager = new DilutionStepManager(stepRepo);
+
+        //  Загружаем данные из БД в память
+        seriesManager.loadFromDatabase();
+        stepManager.loadFromDatabase();
+
+        //  Создаём AuthService с репозиторием
+        AuthService authService = new AuthService(userRepo);
+
+
+        DilutionService dilutionService = new DilutionService(seriesManager, stepManager, authService);
 
         Scanner scanner = new Scanner(System.in);
 
         CommandLineInterface cli = new CommandLineInterface(
                 scanner,
                 dilutionService,
-                seriesCollectionManager,
-                dilutionStepManager
+                seriesManager,
+                stepManager
         );
 
         Environment environment = new Environment(
-                seriesCollectionManager,
-                dilutionStepManager,
+                seriesManager,
+                stepManager,
                 dilutionService,
                 cli,
                 scanner,
@@ -46,8 +56,12 @@ public class Main {
 
         registerAllCommands(interpreter, environment);
 
+        System.out.println(" Dilution Manager CLI (PostgreSQL)");
+        System.out.println("Введите 'help' для списка команд или 'login' для входа");
+
         interpreter.run();
     }
+
     private static void registerAllCommands(CommandInterpreter interpreter, Environment environment) {
         Set<Long> knownSampleIds = new HashSet<>(Set.of(12L));
         Set<Long> knownSolutionIds = new HashSet<>(Set.of(1L));
@@ -62,12 +76,11 @@ public class Main {
         interpreter.register(new DilLinkSetCommand(environment, knownSampleIds, knownSolutionIds));
         interpreter.register(new DilCalcCommand(environment));
         interpreter.register(new DilExportCommand(environment));
-        interpreter.register(new SaveCommand(environment));
-        interpreter.register(new LoadCommand(environment));
+        // Save/Load для CSV больше не нужны, но можно оставить для совместимости
+        // interpreter.register(new SaveCommand(environment));
+        // interpreter.register(new LoadCommand(environment));
         interpreter.register(new HelpCommand(interpreter.getCommands()));
         interpreter.register(new ExitCommand(interpreter::stop));
-        interpreter.register(new SaveCommand(environment));
-        interpreter.register(new LoadCommand(environment));
         interpreter.register(new RegisterCommand(environment));
         interpreter.register(new LoginCommand(environment));
         interpreter.register(new DilSeriesDeleteCommand(environment));

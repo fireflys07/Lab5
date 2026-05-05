@@ -1,40 +1,33 @@
 package ru.itmo.anya.mark.service;
 
 import ru.itmo.anya.mark.model.User;
-import ru.itmo.anya.mark.storage.UserStorage;
-
-import java.nio.file.Path;
+import ru.itmo.anya.mark.storage.UserRepository;
 
 public class AuthService {
-
-    private final UserStorage userStorage;
+    private final UserRepository userRepository;
     private String currentUserLogin;
 
-    public AuthService(UserStorage userStorage, Path usersFilePath) {
-        this.userStorage = userStorage;
-        try {
-            userStorage.load(usersFilePath);
-        } catch (Exception e) {
-        }
+    public AuthService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
+    // Регистрация
     public boolean register(String login, String password) {
-        if (login == null || login.trim().isEmpty()) return false;
-        if (password == null || password.length() < 4) return false;
-
+        if (userRepository.findByLogin(login).isPresent()) {
+            return false; // Уже существует
+        }
         User user = new User(login, password);
-        return userStorage.addUser(user);
+        return userRepository.save(user);
     }
 
+    // Вход
     public boolean login(String login, String password) {
-        boolean success = userStorage.findByLogin(login)
-                .filter(user -> user.checkPassword(password))
-                .isPresent();
-
-        if (success) {
+        User user = userRepository.findByLogin(login).orElse(null);
+        if (user != null && user.checkPassword(password)) {
             currentUserLogin = login;
+            return true;
         }
-        return success;
+        return false;
     }
 
     public void logout() {
@@ -47,13 +40,5 @@ public class AuthService {
 
     public String getCurrentUser() {
         return currentUserLogin;
-    }
-
-    public void saveUsers(Path path) throws Exception {
-        userStorage.save(userStorage.load(path), path);
-    }
-
-    public void reloadUsers(Path path) throws Exception {
-        userStorage.load(path);
     }
 }
