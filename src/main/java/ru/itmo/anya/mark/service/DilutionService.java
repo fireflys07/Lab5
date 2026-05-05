@@ -204,9 +204,26 @@ public class DilutionService {
 
     // 4) dil_step_add
     public DilutionStep addStep(long seriesId, int stepNumber, double factor, double finalQuantity, FinalQuantityUnit unit) {
-        if (seriesManager.getById(seriesId) == null) {
-            throw new IllegalArgumentException("series: не найден");
+        DilutionSeries series = seriesManager.getById(seriesId);
+        if (series == null) {
+            throw new IllegalArgumentException("Серия не найдена");
         }
+
+        if (!authService.isAuthenticated()) {
+            throw new SecurityException(
+                    "Требуется авторизация для добавления шагов. " +
+                            "Пожалуйста, зарегистрируйтесь или войдите в систему."
+            );
+        }
+
+        String currentUser = authService.getCurrentUser();
+        if (!currentUser.equals(series.getOwnerUsername())) {
+            throw new SecurityException(
+                    "Ошибка: у вас нет прав на добавление шагов к этой серии. " +
+                            "Владелец: " + series.getOwnerUsername()
+            );
+        }
+
         if (stepNumber <= 0) {
             throw new IllegalArgumentException("stepNumber: должен быть > 0");
         }
@@ -218,6 +235,12 @@ public class DilutionService {
         }
         if (unit == null) {
             throw new IllegalArgumentException("не может быть: null");
+        }
+
+        boolean exists = stepManager.getAll().stream()
+                .anyMatch(s -> s.getSeriesId() == seriesId && s.getStepNumber() == stepNumber);
+        if (exists) {
+            throw new IllegalArgumentException("Шаг с таким номером уже существует");
         }
 
         long stepId = stepManager.getStepsNextID();
@@ -294,7 +317,7 @@ public class DilutionService {
         series.setUpdatedAt(Instant.now());
     }
 
-    // Метод проверки прав (должен быть в DilutionService)
+    // Метод проверки прав
     private void checkOwnership(String ownerUsername) {
         if (!authService.isAuthenticated()) {
             throw new SecurityException("Требуется авторизация");
