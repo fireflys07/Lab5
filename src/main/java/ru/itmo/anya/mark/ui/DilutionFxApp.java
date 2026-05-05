@@ -38,6 +38,8 @@ import java.util.List;
 import ru.itmo.anya.mark.model.User;
 import ru.itmo.anya.mark.storage.CsvUserStorage;
 import ru.itmo.anya.mark.service.AuthService;
+import ru.itmo.anya.mark.storage.DatabaseConnection;
+
 import java.nio.file.Paths;
 
 
@@ -73,6 +75,7 @@ public class DilutionFxApp extends Application {
 
     @Override
     public void start(Stage stage) {
+        DatabaseConnection.getInstance().testConnection();
         try {
             userStorage.load(usersFile);
         } catch (Exception e) {
