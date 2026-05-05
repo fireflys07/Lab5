@@ -26,7 +26,12 @@
             <version>${javafx.version}</version>
             <classifier>win</classifier>
         </dependency>
-
+        <!-- PostgreSQL Driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.6.0</version>
+        </dependency>
         <!-- Jackson -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
