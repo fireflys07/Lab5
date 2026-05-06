@@ -11,23 +11,33 @@ public class AuthService {
         this.userRepository = userRepository;
     }
 
-    // Регистрация
-    public boolean register(String login, String password) {
-        if (userRepository.findByLogin(login).isPresent()) {
-            return false; // Уже существует
+    public boolean register(String login, String password) throws Exception {
+        try {
+            // Проверяем, существует ли пользователь
+            if (userRepository.findByLogin(login).isPresent()) {
+                return false; // Действительно существует
+            }
+            // Создаём нового
+            User user = new User(login, password);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            // Пробрасываем ошибку БД
+            throw new Exception("Ошибка при регистрации: " + e.getMessage(), e);
         }
-        User user = new User(login, password);
-        return userRepository.save(user);
     }
 
-    // Вход
-    public boolean login(String login, String password) {
-        User user = userRepository.findByLogin(login).orElse(null);
-        if (user != null && user.checkPassword(password)) {
-            currentUserLogin = login;
-            return true;
+    public boolean login(String login, String password) throws Exception {
+        try {
+            User user = userRepository.findByLogin(login).orElse(null);
+            if (user != null && user.checkPassword(password)) {
+                currentUserLogin = login;
+                return true;
+            }
+            return false; // Неверный пароль
+        } catch (Exception e) {
+            // Пробрасываем ошибку БД
+            throw new Exception("Ошибка при входе: " + e.getMessage(), e);
         }
-        return false;
     }
 
     public void logout() {

@@ -39,12 +39,17 @@ public final class RegisterCommand extends BaseCommand {
     public void execute(Environment env, String[] args) throws CommandException {
         try {
             if (env.getAuthService().register(login, password)) {
-                System.out.println("OK пользователь зарегистрирован: " + login);
+                System.out.println("OK регистрация успешна: " + login);
             } else {
-                throw new CommandException("пользователь с таким логином уже существует");
+                throw new CommandException("пользователь уже существует");
             }
-        } catch (IllegalArgumentException e) {
-            throw new CommandException(e.getMessage());
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("Ошибка БД")) {
+                throw new CommandException("Ошибка подключения к базе данных");
+            } else {
+                throw new CommandException("Ошибка регистрации: " + msg);
+            }
         }
     }
 }

@@ -34,10 +34,20 @@ public final class LoginCommand extends BaseCommand {
 
     @Override
     public void execute(Environment env, String[] args) throws CommandException {
-        if (env.getAuthService().login(login, password)) {
-            System.out.println("OK вход выполнен: " + login);
-        } else {
-            throw new CommandException("неверный логин или пароль");
+        try {
+            if (env.getAuthService().login(login, password)) {
+                System.out.println("OK вход выполнен: " + login);
+            } else {
+                throw new CommandException("неверный логин или пароль");
+            }
+        } catch (Exception e) {
+            // Ловим ошибку БД
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("Ошибка БД")) {
+                throw new CommandException("Ошибка подключения к базе данных: " + e.getCause().getMessage());
+            } else {
+                throw new CommandException("Ошибка входа: " + msg);
+            }
         }
     }
 }

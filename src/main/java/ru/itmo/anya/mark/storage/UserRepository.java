@@ -6,7 +6,7 @@ import java.util.*;
 
 public class UserRepository {
 
-    public boolean save(User user) {
+    public boolean save(User user) throws Exception {
         String sql = "INSERT INTO users (login, password_hash) VALUES (?, ?) " +
                 "ON CONFLICT (login) DO UPDATE SET password_hash = EXCLUDED.password_hash";
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
@@ -15,12 +15,11 @@ public class UserRepository {
             stmt.setString(2, user.getPasswordHash());
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Ошибка сохранения пользователя: " + e.getMessage());
-            return false;
+            throw new Exception("Ошибка сохранения пользователя: " + e.getMessage(), e);
         }
     }
 
-    public Optional<User> findByLogin(String login) {
+    public Optional<User> findByLogin(String login) throws Exception {
         String sql = "SELECT login, password_hash FROM users WHERE login = ?";
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -32,12 +31,12 @@ public class UserRepository {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Ошибка поиска пользователя: " + e.getMessage());
+            throw new Exception("Ошибка поиска пользователя: " + e.getMessage(), e);
         }
         return Optional.empty();
     }
 
-    public List<User> findAll() {
+    public List<User> findAll() throws Exception {
         List<User> users = new ArrayList<>();
         String sql = "SELECT login, password_hash FROM users ORDER BY login";
         try (Connection conn = DatabaseConnection.getInstance().getConnection();
@@ -47,7 +46,7 @@ public class UserRepository {
                 users.add(new User(rs.getString("login"), rs.getString("password_hash"), true));
             }
         } catch (SQLException e) {
-            System.err.println("Ошибка загрузки пользователей: " + e.getMessage());
+            throw new Exception("Ошибка загрузки пользователей: " + e.getMessage(), e);
         }
         return users;
     }
@@ -62,7 +61,9 @@ public class UserRepository {
                     return rs.getInt(1) > 0;
                 }
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return false;
     }
 }

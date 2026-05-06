@@ -1,5 +1,7 @@
 package ru.itmo.anya.mark.ui;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -12,6 +14,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 
+import javafx.util.Duration;
 import ru.itmo.anya.mark.model.*;
 import ru.itmo.anya.mark.service.*;
 import ru.itmo.anya.mark.storage.*;
@@ -27,7 +30,7 @@ import java.util.Comparator;
 
 public class DilutionFxApp extends Application {
 
-    private static final String TINY_GIF_B64 = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    private static final String TINY_GIF_B64 = "";
 
     private static final String CARD_NORMAL =
             "-fx-border-color: #b9b9b9; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;";
@@ -45,6 +48,7 @@ public class DilutionFxApp extends Application {
     private final VBox cardsBox = new VBox(10);
     private final ProgressBar progressBar = new ProgressBar();
     private final Label statusLabel = new Label("Готово");
+    private boolean databaseConnectionFailed = false;
 
     private VBox selectedCard;
     private BorderPane rootPane;
@@ -55,24 +59,47 @@ public class DilutionFxApp extends Application {
     private final java.util.Random random = new java.util.Random();
 
     @Override
+
+
     public void start(Stage stage) {
         this.primaryStage = stage;
 
-        DatabaseConnection.getInstance().testConnection();
+        // Пробуем подключиться к БД
+        try {
+            DatabaseConnection.getInstance().testConnection();
+        } catch (Exception e) {
+            databaseConnectionFailed = true;
+            System.err.println(" Предупреждение: " + e.getMessage());
+            // Не прерываем запуск, просто запоминаем ошибку
+        }
 
-        UserRepository userRepo = new UserRepository();
-        SeriesRepository seriesRepo = new SeriesRepository();
-        StepRepository stepRepo = new StepRepository();
+        try {
+            UserRepository userRepo = new UserRepository();
+            SeriesRepository seriesRepo = new SeriesRepository();
+            StepRepository stepRepo = new StepRepository();
 
-        authService = new AuthService(userRepo);
-        seriesManager = new SeriesCollectionManager(seriesRepo);
-        stepManager = new DilutionStepManager(stepRepo);
-        service = new DilutionService(seriesManager, stepManager, authService);
+            authService = new AuthService(userRepo);
+            seriesManager = new SeriesCollectionManager(seriesRepo);
+            stepManager = new DilutionStepManager(stepRepo);
+            service = new DilutionService(seriesManager, stepManager, authService);
 
-        seriesManager.loadFromDatabase();
-        stepManager.loadFromDatabase();
+            seriesManager.loadFromDatabase();
+            stepManager.loadFromDatabase();
+        } catch (Exception e) {
+            databaseConnectionFailed = true;
+            System.err.println("  Предупреждение: " + e.getMessage());
+        }
 
         showLoginWindow(stage);
+
+        if (databaseConnectionFailed) {
+
+            Platform.runLater(() -> {
+
+                Timeline timeline = new Timeline(new KeyFrame(Duration.millis(200), e -> showDatabaseError("Connection refused - БДшка не отвечает на порту 5432")));
+                timeline.play();
+            });
+        }
     }
 
     private void showLoginWindow(Stage stage) {
@@ -82,31 +109,28 @@ public class DilutionFxApp extends Application {
         grid.setPadding(new Insets(20));
         grid.setAlignment(javafx.geometry.Pos.CENTER);
         grid.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
+
+        // Загрузка иконки
         try {
             Image icon = new Image(getClass().getResourceAsStream("/logo.png"));
             stage.getIcons().add(icon);
         } catch (Exception e) {
             System.err.println("Не удалось загрузить иконку: " + e.getMessage());
         }
-        Label titleLabel = new Label("Wellcome to Dilution Manager! :3");
+
+        Label titleLabel = new Label("Welcome to Dilution Manager! :3");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-padding: 0 0 5 0;");
         GridPane.setHalignment(titleLabel, javafx.geometry.HPos.CENTER);
 
         TextField loginField = new TextField();
         loginField.setPromptText("Логин");
-        loginField.setPrefWidth(280);
+        loginField.setPrefWidth(380);
         loginField.setMaxWidth(Double.MAX_VALUE);
 
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Пароль");
-        passwordField.setMaxWidth(Double.MAX_VALUE);
-
-
-        loginField.setPromptText("Логин");
-        loginField.setPrefWidth(380);
-
-
         passwordField.setPrefWidth(380);
+        passwordField.setMaxWidth(Double.MAX_VALUE);
 
         Button loginBtn = new Button("Войти");
         loginBtn.setStyle("-fx-base: #2a6fdb; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 30;");
@@ -119,8 +143,15 @@ public class DilutionFxApp extends Application {
         Label statusLabel = new Label();
         statusLabel.setStyle("-fx-text-fill: #d32f2f; -fx-font-size: 12px;");
         statusLabel.setWrapText(true);
-        statusLabel.setMaxWidth(280);
+        statusLabel.setMaxWidth(380);
 
+
+        if (databaseConnectionFailed) {
+            statusLabel.setText("  НЕТ ПОДКЛЮЧЕНИЯ К БД! Проверьте PostgreSQL и порт 5433");
+            statusLabel.setStyle("-fx-text-fill: #d32f2f; -fx-font-weight: bold; -fx-font-size: 14px;");
+        }
+
+        // Обработчик кнопки ВХОД
         loginBtn.setOnAction(e -> {
             String login = loginField.getText().trim();
             String password = passwordField.getText();
@@ -130,15 +161,39 @@ public class DilutionFxApp extends Application {
                 return;
             }
 
-            if (authService.login(login, password)) {
-                currentUsername = login;
-                openMainApplication(stage);
-            } else {
-                statusLabel.setText("Неверный логин или пароль");
+            try {
+                if (authService.login(login, password)) {
+                    currentUsername = login;
+                    openMainApplication(stage);
+                } else {
+                    statusLabel.setText("Неверный логин или пароль");
+                }
+            } catch (Exception ex) {
+                // Ловим ошибку БД и показываем её красным
+                String msg = ex.getMessage();
+                if (msg != null && msg.contains("Ошибка базы данных")) {
+                    statusLabel.setText(" НЕТ СВЯЗИ С БД!");
+                    statusLabel.setStyle("-fx-text-fill: #d32f2f; -fx-font-weight: bold; -fx-font-size: 15px;");
+                } else {
+                    statusLabel.setText("Ошибка: " + msg);
+                }
             }
         });
 
-        registerBtn.setOnAction(e -> showRegisterDialog(stage, statusLabel));
+// Обработчик кнопки регистрацияяяяя
+        registerBtn.setOnAction(e -> {
+            try {
+                showRegisterDialog(stage, statusLabel);
+            } catch (Exception ex) {
+                String msg = ex.getMessage();
+                if (msg != null && msg.contains("Ошибка базы данных")) {
+                    statusLabel.setText(" НЕТ СВЯЗИ С БД!");
+                    statusLabel.setStyle("-fx-text-fill: #d32f2f; -fx-font-weight: bold; -fx-font-size: 15px;");
+                } else {
+                    statusLabel.setText("Ошибка: " + msg);
+                }
+            }
+        });
 
         // Кнопки в отдельной панели для центрирования
         HBox buttonBox = new HBox(15, loginBtn, registerBtn);
@@ -160,7 +215,7 @@ public class DilutionFxApp extends Application {
         stage.show();
     }
     private void openMainApplication(Stage stage) {
-        stage.setTitle("Dilution Manager (PostgreSQL)");
+        stage.setTitle("Dilution Manager v.2.1 Ohae, Hello world!");
 
         rootPane = new BorderPane();
         rootPane.setPadding(new Insets(12));
@@ -184,7 +239,7 @@ public class DilutionFxApp extends Application {
     }
 
     private VBox buildFunnyGifPanel() {
-        ImageView gifView = new ImageView(loadFunnyGifImage());
+        gifView = new ImageView(loadFunnyGifImage()); // Сохраняем ссылку
         gifView.setPreserveRatio(true);
         gifView.setFitWidth(160);
         gifView.setFitHeight(160);
@@ -204,7 +259,19 @@ public class DilutionFxApp extends Application {
         box.setMaxWidth(200);
         return box;
     }
+    private void loadRandomGif() {
+        if (GifNames == null || GifNames.length == 0) return;
 
+        String randomName = GifNames[random.nextInt(GifNames.length)];
+        try (InputStream in = getClass().getResourceAsStream("/" + randomName)) {
+            if (in != null) {
+                Image newImage = new Image(in, 160, 160, true, true);
+                gifView.setImage(newImage);
+            }
+        } catch (IOException e) {
+            System.err.println("Не удалось загрузить гифку: " + e.getMessage());
+        }
+    }
     private Image loadFunnyGifImage() {
         try (InputStream in = getClass().getResourceAsStream("/funny.gif")) {
             if (in != null) return new Image(in, 160, 160, true, true);
@@ -228,18 +295,15 @@ public class DilutionFxApp extends Application {
     }
 
     private HBox buildToolbar() {
-        Button showGifButton = new Button("Показать GIF");
-        showGifButton.setOnAction(e -> rootPane.setRight(funnyGifPanel));
-
-        Button logoutButton = new Button("Выход");
-        logoutButton.setOnAction(e -> {
-            authService.logout();
-            currentUsername = null;
-            showLoginWindow(primaryStage);
-        });
+        userStatusLabel = new Label("Пользователь: " + currentUsername);
+        userStatusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
 
         Button refreshButton = new Button("Обновить");
         refreshButton.setOnAction(e -> {
+            // меняем гифку
+            loadRandomGif();
+
+            // Затем обновляем данные из БД
             runInBackground("refresh", () -> {
                 seriesManager.loadFromDatabase();
                 stepManager.loadFromDatabase();
@@ -250,19 +314,20 @@ public class DilutionFxApp extends Application {
             }, true);
         });
 
-        userStatusLabel = new Label("Пользователь: " + currentUsername);
-        userStatusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        Button logoutButton = new Button("Выход");
+        logoutButton.setOnAction(e -> {
+            authService.logout();
+            currentUsername = null;
+            showLoginWindow(primaryStage);
+        });
 
         HBox row = new HBox(10,
-                new Region(),
                 userStatusLabel,
                 new Region(),
                 refreshButton,
-                showGifButton,
                 logoutButton
         );
-        HBox.setHgrow(row.getChildren().get(0), Priority.ALWAYS);
-        HBox.setHgrow(row.getChildren().get(2), Priority.ALWAYS);
+        HBox.setHgrow(row.getChildren().get(1), Priority.ALWAYS);
         row.setPadding(new Insets(4, 0, 0, 0));
         return row;
     }
@@ -679,10 +744,15 @@ public class DilutionFxApp extends Application {
         confirmField.setPromptText("Повторите пароль");
 
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20));
-        grid.add(new Label("Логин:"), 0, 0); grid.add(loginField, 1, 0);
-        grid.add(new Label("Пароль:"), 0, 1); grid.add(passField, 1, 1);
-        grid.add(new Label("Повтор:"), 0, 2); grid.add(confirmField, 1, 2);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+        grid.add(new Label("Логин:"), 0, 0);
+        grid.add(loginField, 1, 0);
+        grid.add(new Label("Пароль:"), 0, 1);
+        grid.add(passField, 1, 1);
+        grid.add(new Label("Повтор:"), 0, 2);
+        grid.add(confirmField, 1, 2);
 
         Alert alert = new Alert(Alert.AlertType.NONE);
         alert.setTitle("Регистрация");
@@ -698,14 +768,40 @@ public class DilutionFxApp extends Application {
                 String pass = passField.getText();
                 String confirm = confirmField.getText();
 
-                if (login.length() < 3) { statusLabel.setText("Логин: минимум 3 символа"); return; }
-                if (pass.length() < 4) { statusLabel.setText("Пароль: минимум 4 символа"); return; }
-                if (!pass.equals(confirm)) { statusLabel.setText("Пароли не совпадают"); return; }
+                if (login.length() < 3) {
+                    statusLabel.setText("Логин: минимум 3 символа");
+                    return;
+                }
+                if (pass.length() < 4) {
+                    statusLabel.setText("Пароль: минимум 4 символа");
+                    return;
+                }
+                if (!pass.equals(confirm)) {
+                    statusLabel.setText("Пароли не совпадают");
+                    return;
+                }
 
-                if (authService.register(login, pass)) {
-                    statusLabel.setText("Регистрация успешна! Теперь войдите.");
-                } else {
-                    statusLabel.setText("Пользователь уже существует");
+
+                try {
+                    if (authService.register(login, pass)) {
+                        statusLabel.setText("Регистрация успешна! Теперь войдите.");
+                    } else {
+                        statusLabel.setText("Пользователь уже существует");
+                    }
+                } catch (Exception ex) {
+
+                    showDatabaseError(ex.getMessage());
+                    statusLabel.setText("Ошибка подключения к БД");
+                }
+                try {
+                    if (authService.register(login, pass)) {
+                        statusLabel.setText("Регистрация успешна! Теперь войдите.");
+                    } else {
+                        statusLabel.setText("Пользователь уже существует");
+                    }
+                } catch (Exception ex) {
+                    // Проброс ошибки БД
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -726,6 +822,23 @@ public class DilutionFxApp extends Application {
                 });
             }, true);
         }
+    }
+    private void showDatabaseError(String details) {
+        // Создаем окно ошибки
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Ошибка подключения");
+        alert.setHeaderText("Не удалось подключиться к базе данных");
+        alert.setContentText(
+                "Проверьте:\n" +
+                        " Запущен ли PostgreSQL\n" +
+                        " Правильность порта в database.properties (сейчас: 5433)\n" +
+                        " Доступность сети\n\n" +
+                        "Детали: " + (details != null ? details : "Нет информации")
+        );
+        alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+
+
+        alert.showAndWait();
     }
 
     @FunctionalInterface
